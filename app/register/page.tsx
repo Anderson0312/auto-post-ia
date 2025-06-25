@@ -1,16 +1,19 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Bot, Mail, Lock, User, Eye, EyeOff } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Bot, Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -20,22 +23,47 @@ export default function RegisterPage() {
     password: "",
     acceptTerms: false,
   })
+  const [error, setError] = useState("")
+
+  const { register } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+
+  const handleInputChange = (field: string, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    if (error) setError("")
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simular cadastro
-    setTimeout(() => {
+    if (!formData.acceptTerms) {
+      setError("Você deve aceitar os termos de uso")
       setIsLoading(false)
-      // Redirecionar para dashboard
-      window.location.href = "/dashboard"
-    }, 1500)
-  }
+      return
+    }
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    try {
+      await register(formData)
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Bem-vindo ao AutoPostIA",
+      })
+      router.push("/dashboard")
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro ao criar conta"
+      setError(errorMessage)
+      toast({
+        title: "Erro no cadastro",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -50,6 +78,13 @@ export default function RegisterPage() {
           <CardDescription>Comece a automatizar suas redes sociais gratuitamente</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome completo</Label>
@@ -63,6 +98,7 @@ export default function RegisterPage() {
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   className="pl-10"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -79,6 +115,7 @@ export default function RegisterPage() {
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   className="pl-10"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -96,6 +133,7 @@ export default function RegisterPage() {
                   className="pl-10 pr-10"
                   required
                   minLength={8}
+                  disabled={isLoading}
                 />
                 <Button
                   type="button"
@@ -103,6 +141,7 @@ export default function RegisterPage() {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-gray-400" />
@@ -119,6 +158,7 @@ export default function RegisterPage() {
                 checked={formData.acceptTerms}
                 onCheckedChange={(checked) => handleInputChange("acceptTerms", checked as boolean)}
                 required
+                disabled={isLoading}
               />
               <Label htmlFor="terms" className="text-sm text-gray-600">
                 Aceito os{" "}
@@ -147,7 +187,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" disabled={isLoading}>
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -168,7 +208,7 @@ export default function RegisterPage() {
               </svg>
               Google
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" disabled={isLoading}>
               <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
               </svg>
