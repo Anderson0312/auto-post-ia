@@ -84,6 +84,18 @@ class APIClient {
     })
   }
 
+  // Demo login method
+  async loginDemo() {
+    return this.request<{
+      user: any
+      token: string
+      message: string
+      isDemo: boolean
+    }>("/auth/demo", {
+      method: "POST",
+    })
+  }
+
   // User methods
   async getProfile() {
     return this.request<{ user: any }>("/user/profile")

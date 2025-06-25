@@ -46,9 +46,11 @@ export default function LandingPage() {
               Começar Gratuitamente
             </Button>
           </Link>
-          <Button size="lg" variant="outline" className="px-8">
-            Ver Demo
-          </Button>
+          <Link href="/demo">
+            <Button size="lg" variant="outline" className="px-8">
+              Ver Demo
+            </Button>
+          </Link>
         </div>
       </section>
 
@@ -151,6 +153,35 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Demo Section */}
+      <section className="container mx-auto px-4 py-20">
+        <Card className="max-w-3xl mx-auto border-0 shadow-xl bg-gradient-to-r from-green-600 to-blue-600 text-white">
+          <CardContent className="p-12 text-center">
+            <h2 className="text-3xl font-bold mb-4">Veja o AutoPostIA em Ação</h2>
+            <p className="text-green-100 mb-8 text-lg">
+              Explore nossa demonstração interativa com dados reais. Veja como a IA cria conteúdo, agenda posts e gera
+              relatórios detalhados.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Link href="/demo">
+                <Button size="lg" variant="secondary" className="px-8">
+                  Explorar Demonstração
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 border-white text-white hover:bg-white hover:text-green-600"
+                >
+                  Começar Grátis
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       {/* CTA */}
