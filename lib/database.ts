@@ -132,9 +132,13 @@ export class DatabaseService {
   }
 
   static async updateAIConfiguration(userId: string, config: any) {
+    // Primeiro, desativar configurações existentes
+    await supabaseAdmin.from("ai_configurations").update({ is_active: false }).eq("user_id", userId)
+
+    // Criar nova configuração
     const { data, error } = await supabaseAdmin
       .from("ai_configurations")
-      .upsert([{ user_id: userId, ...config }])
+      .insert([{ user_id: userId, ...config }])
       .select()
       .single()
 
@@ -149,9 +153,10 @@ export class DatabaseService {
       .select("*")
       .eq("user_id", userId)
       .eq("is_active", true)
+      .order("created_at", { ascending: false })
 
     if (error) throw error
-    return data
+    return data || []
   }
 
   static async createAITheme(themeData: {
@@ -168,7 +173,7 @@ export class DatabaseService {
   static async deleteAITheme(themeId: string) {
     const { data, error } = await supabaseAdmin
       .from("ai_themes")
-      .update({ is_active: false })
+      .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq("id", themeId)
       .select()
       .single()
