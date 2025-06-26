@@ -26,6 +26,7 @@ import {
   MessageCircle,
 } from "lucide-react"
 import Link from "next/link"
+import { UserMenu } from "@/components/user-menu"
 
 export default function DashboardPage() {
   const [connectedAccounts] = useState([
@@ -106,9 +107,7 @@ export default function DashboardPage() {
                 Configurações
               </Button>
             </Link>
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-              U
-            </div>
+            <UserMenu />
           </div>
         </div>
       </header>
