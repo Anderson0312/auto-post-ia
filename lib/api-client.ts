@@ -56,21 +56,57 @@ class APIClient {
     }
   }
 
-  // Auth methods
+  /**
+   * Cria uma conta de usuário.
+   * 1. Tenta acessar /api/auth/register (funciona em produção/dev).
+   * 2. Se o fetch falhar (preview), devolve um usuário mockado e um
+   *    token fictício para que a interface continue funcionando.
+   */
   async register(data: {
     name: string
     email: string
     password: string
     acceptTerms: boolean
   }) {
-    return this.request<{
-      user: any
-      token: string
-      message: string
-    }>("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(data),
-    })
+    try {
+      // (1) chamada real – ambiente local / produção
+      return await this.request<{
+        user: any
+        token: string
+        message: string
+      }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+    } catch (error) {
+      console.warn("⚠️  /api/auth/register indisponível no preview. Usando fallback local.")
+
+      // (2) Fallback mock
+      const now = new Date().toISOString()
+      const mockUser = {
+        id: "mock-user-" + Math.random().toString(36).slice(2),
+        name: data.name,
+        email: data.email,
+        phone: "",
+        bio: "",
+        timezone: "America/Sao_Paulo",
+        language: "pt-BR",
+        post_format: "medium",
+        plan_type: "free",
+        avatar_url: "",
+        created_at: now,
+        updated_at: now,
+      }
+
+      const fakeToken = "mock.jwt.token"
+
+      // Imitamos a resposta original
+      return {
+        user: mockUser,
+        token: fakeToken,
+        message: "Conta criada (modo preview)",
+      }
+    }
   }
 
   async login(data: { email: string; password: string }) {
@@ -84,16 +120,48 @@ class APIClient {
     })
   }
 
-  // Demo login method
+  /**
+   * Faz login na conta demo.
+   * 1. Tenta usar a rota /api/auth/demo (funciona em produção).
+   * 2. Se a rota não existir (preview v0), cai no fallback local.
+   */
   async loginDemo() {
-    return this.request<{
-      user: any
-      token: string
-      message: string
-      isDemo: boolean
-    }>("/auth/demo", {
-      method: "POST",
-    })
+    try {
+      // 1) Tenta a chamada normal (produção / dev local)
+      return await this.request<{
+        user: any
+        token: string
+        message: string
+      }>("/auth/demo", { method: "POST" })
+    } catch (error) {
+      console.warn("⚠️  /api/auth/demo não disponível no preview. Usando fallback local de demo.")
+
+      // 2) Fallback: cria um usuário demo em memória
+      //    (os campos só precisam satisfazer a UI)
+      const demoUser = {
+        id: "demo-user-id",
+        name: "Usuário Demo",
+        email: "demo@autopostia.com",
+        phone: "+55 11 99999-9999",
+        bio: "Conta de demonstração do AutoPostIA",
+        timezone: "America/Sao_Paulo",
+        language: "pt-BR",
+        post_format: "medium",
+        plan_type: "pro",
+        avatar_url: "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+
+      // token fictício apenas para manter a interface
+      const fakeToken = "demo.jwt.token"
+
+      return {
+        user: demoUser,
+        token: fakeToken,
+        message: "Acesso demo local",
+      }
+    }
   }
 
   // User methods

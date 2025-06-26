@@ -20,6 +20,7 @@ export class DatabaseService {
   static async createUser(userData: {
     email: string
     name: string
+    password: string
     phone?: string
     bio?: string
     timezone?: string
@@ -50,8 +51,27 @@ export class DatabaseService {
     return data
   }
 
+  static async getUserByEmail(email: string) {
+    const { data, error } = await supabaseAdmin.from("users").select("*").eq("email", email).single()
+
+    if (error) throw error
+    return data
+  }
+
   static async updateUser(userId: string, updates: any) {
     const { data, error } = await supabaseAdmin.from("users").update(updates).eq("id", userId).select().single()
+
+    if (error) throw error
+    return data
+  }
+
+  // User settings operations
+  static async createUserSettings(userId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("user_settings")
+      .insert([{ user_id: userId }])
+      .select()
+      .single()
 
     if (error) throw error
     return data

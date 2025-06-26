@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast"
 export default function DemoPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const { login, user } = useAuth()
+  const { loginDemo, user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -31,7 +31,7 @@ export default function DemoPage() {
 
     try {
       // Login automático com usuário demo
-      await login("demo@autopostia.com", "demo123456")
+      await loginDemo()
 
       toast({
         title: "Bem-vindo à demonstração!",

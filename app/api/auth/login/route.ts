@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database"
 import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
+import { signToken } from "@/lib/jwt"
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET!, { expiresIn: "7d" })
+    const token = await signToken({ userId: user.id, email: user.email })
 
     // Update last login
     await DatabaseService.updateUser(user.id, {

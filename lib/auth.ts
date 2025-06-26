@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import jwt from "jsonwebtoken"
+import { signToken, verifyJwt } from "@/lib/jwt"
 
 export async function verifyToken(request: NextRequest): Promise<string | null> {
   try {
@@ -9,7 +9,7 @@ export async function verifyToken(request: NextRequest): Promise<string | null> 
     }
 
     const token = authHeader.substring(7)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string }
+    const decoded = await verifyJwt<{ userId: string }>(token)
 
     return decoded.userId
   } catch (error) {
@@ -18,6 +18,6 @@ export async function verifyToken(request: NextRequest): Promise<string | null> 
   }
 }
 
-export function generateToken(userId: string, email: string): string {
-  return jwt.sign({ userId, email }, process.env.JWT_SECRET!, { expiresIn: "7d" })
+export async function generateToken(userId: string, email: string): Promise<string> {
+  return await signToken({ userId, email })
 }
