@@ -18,9 +18,3 @@ export async function verifyJwt<T extends JWTPayload = JWTPayload>(token: string
   const { payload } = await jwtVerify<T>(token, secret)
   return payload
 }
-
-/**
- * Alias exported as `verifyToken` for compatibility with code that
- * expects this name. It simply forwards to `verifyJwt`.
- */
-export const verifyToken = verifyJwt
