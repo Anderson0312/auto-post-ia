@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -24,15 +24,46 @@ import {
   ShoppingCart,
 } from "lucide-react"
 import Link from "next/link"
+import { apiClient } from "@/lib/api-client"
 
 export default function AIConfigPage() {
-  const [themes, setThemes] = useState(["Produtividade e organização", "Marketing digital", "Empreendedorismo"])
+  const [themes, setThemes] = useState<string[]>(["Produtividade e organização", "Marketing digital", "Empreendedorismo"])
   const [newTheme, setNewTheme] = useState("")
   const [postsPerDay, setPostsPerDay] = useState([2])
-  const [postTimes, setPostTimes] = useState(["09:00", "15:00"])
+  const [postTimes, setPostTimes] = useState<string[]>(["09:00", "15:00"])
   const [contentStyle, setContentStyle] = useState("professional")
   const [generateImages, setGenerateImages] = useState(true)
   const [postObjective, setPostObjective] = useState("engagement")
+  const [customInstructions, setCustomInstructions] = useState("")
+  const [language, setLanguage] = useState("pt-BR")
+  const [postFormat, setPostFormat] = useState("medium")
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+
+  // Buscar config ao montar
+  useEffect(() => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    apiClient.getAIConfig()
+      .then((data) => {
+        if (data && data.config) {
+          setThemes(data.config.themes || [])
+          setPostsPerDay([data.config.posts_per_day || 2])
+          setPostTimes(data.config.post_times || ["09:00", "15:00"])
+          setContentStyle(data.config.content_style || "professional")
+          setGenerateImages(Boolean(data.config.generate_images))
+          setPostObjective(data.config.post_objective || "engagement")
+          setCustomInstructions(data.config.custom_instructions || "")
+          setLanguage(data.config.language || "pt-BR")
+          setPostFormat(data.config.post_format || "medium")
+        }
+      })
+      .catch(() => setError("Erro ao carregar configurações"))
+      .finally(() => setLoading(false))
+  }, [])
 
   const addTheme = () => {
     if (newTheme.trim() && !themes.includes(newTheme.trim())) {
@@ -63,9 +94,28 @@ export default function AIConfigPage() {
     }
   }
 
-  const handleSave = () => {
-    // Simular salvamento
-    alert("Configurações salvas com sucesso!")
+  const handleSave = async () => {
+    setLoading(true)
+    setError("")
+    setSuccess("")
+    try {
+      await apiClient.updateAIConfig({
+        themes,
+        posts_per_day: postsPerDay[0],
+        post_times: postTimes,
+        content_style: contentStyle,
+        generate_images: generateImages,
+        post_objective: postObjective,
+        custom_instructions: customInstructions,
+        language,
+        post_format: postFormat,
+      })
+      setSuccess("Configurações salvas com sucesso!")
+    } catch (e: any) {
+      setError(e?.message || "Erro ao salvar configurações")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -85,11 +135,18 @@ export default function AIConfigPage() {
               <h1 className="text-xl font-bold text-gray-900">Configuração da IA</h1>
             </div>
           </div>
-          <Button onClick={handleSave}>Salvar Configurações</Button>
+          <Button onClick={handleSave} disabled={loading}>
+            {loading ? "Salvando..." : "Salvar Configurações"}
+          </Button>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{error}</div>}
+        {success && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">{success}</div>}
+        {loading && !success && !error && (
+          <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded">Carregando...</div>
+        )}
         <div className="space-y-8">
           {/* Temas e Assuntos */}
           <Card>
@@ -274,9 +331,43 @@ export default function AIConfigPage() {
               <Textarea
                 placeholder="Ex: Sempre incluir uma pergunta no final do post, usar emojis moderadamente, mencionar a marca sutilmente..."
                 className="min-h-[100px]"
+                value={customInstructions}
+                onChange={e => setCustomInstructions(e.target.value)}
               />
               <div className="text-sm text-gray-500 mt-2">
                 Seja específico sobre o que você quer que a IA faça ou evite
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Idioma e Formato do Post */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Idioma e Formato</CardTitle>
+              <CardDescription>Escolha o idioma e o formato dos posts gerados</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <Label>Idioma</Label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
+                    <SelectItem value="en-US">Inglês (EUA)</SelectItem>
+                    <SelectItem value="es-ES">Espanhol (Espanha)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label>Formato do Post</Label>
+                <Select value={postFormat} onValueChange={setPostFormat}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">Curto</SelectItem>
+                    <SelectItem value="medium">Médio</SelectItem>
+                    <SelectItem value="long">Longo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
