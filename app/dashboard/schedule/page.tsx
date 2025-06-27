@@ -151,9 +151,9 @@ export default function SchedulePage() {
           </TabsList>
 
           <TabsContent value="calendar" className="space-y-6">
-            <div className="grid lg:grid-cols-3 gap-6">
+            <div className="grid lg:grid-cols-4 gap-6">
               {/* Calendar */}
-              <Card className="lg:col-span-1">
+              <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Calendário</CardTitle>
                   <CardDescription>Selecione uma data para ver os posts agendados</CardDescription>

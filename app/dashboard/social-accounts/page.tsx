@@ -220,7 +220,7 @@ export default function SocialAccountsPage() {
                           </Button>
                         </>
                       ) : (
-                        <Button onClick={() => connectAccount(account.platform)}>
+                        <Button onClick={() => window.location.href = "/api/auth/instagram"}>
                           <ExternalLink className="w-4 h-4 mr-2" />
                           Conectar
                         </Button>
