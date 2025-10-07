@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -220,7 +221,14 @@ export default function SocialAccountsPage() {
                           </Button>
                         </>
                       ) : (
-                        <Button onClick={() => window.location.href = "/api/auth/instagram"}>
+                        <Button
+                          onClick={() => {
+                            const token = apiClient.getToken() || ""
+                            const slug = account.platform.toLowerCase()
+                            const url = `/api/auth/${slug}?token=${encodeURIComponent(token)}`
+                            window.location.href = url
+                          }}
+                        >
                           <ExternalLink className="w-4 h-4 mr-2" />
                           Conectar
                         </Button>

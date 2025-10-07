@@ -118,6 +118,24 @@ export class DatabaseService {
     return data
   }
 
+  // Buscar uma conta social específica por usuário/plataforma/platform_user_id
+  static async getSocialAccount(
+    userId: string,
+    platform: string,
+    platformUserId: string,
+  ): Promise<any | null> {
+    const { data, error } = await supabaseAdmin
+      .from("social_accounts")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("platform", platform)
+      .eq("platform_user_id", platformUserId)
+      .limit(1)
+
+    if (error) throw error
+    return Array.isArray(data) && data.length > 0 ? data[0] : null
+  }
+
   // AI configuration operations
   static async getAIConfiguration(userId: string) {
     const { data, error } = await supabaseAdmin
