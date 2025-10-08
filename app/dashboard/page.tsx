@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -22,46 +22,52 @@ import {
   TrendingUp,
   Users,
   Eye,
-  Heart,
   MessageCircle,
+  Share,
 } from "lucide-react"
 import Link from "next/link"
 import { UserMenu } from "@/components/user-menu"
+import { useSocialAccounts, useAIConfig, usePosts } from "@/hooks/use-api"
+
+function formatDate(dt?: string | null) {
+  if (!dt) return "—"
+  const d = new Date(dt)
+  return d.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })
+}
+
+function getPlatformMeta(platform: string) {
+  const key = String(platform || "").toLowerCase()
+  switch (key) {
+    case "instagram":
+      return { icon: Instagram, color: "text-pink-600", bgColor: "bg-pink-50", label: "Instagram" }
+    case "linkedin":
+      return { icon: Linkedin, color: "text-blue-600", bgColor: "bg-blue-50", label: "LinkedIn" }
+    case "facebook":
+      return { icon: Facebook, color: "text-blue-700", bgColor: "bg-blue-50", label: "Facebook" }
+    case "twitter":
+      return { icon: Twitter, color: "text-black", bgColor: "bg-gray-50", label: "Twitter" }
+    default:
+      return { icon: Users, color: "text-gray-700", bgColor: "bg-gray-50", label: platform }
+  }
+}
 
 export default function DashboardPage() {
-  const [connectedAccounts] = useState([
-    { platform: "Instagram", connected: true, icon: Instagram, color: "text-pink-600" },
-    { platform: "LinkedIn", connected: true, icon: Linkedin, color: "text-blue-600" },
-    { platform: "Facebook", connected: false, icon: Facebook, color: "text-blue-700" },
-    { platform: "Twitter", connected: false, icon: Twitter, color: "text-black" },
-  ])
+  const { data: accountsResp, loading: loadingAccounts } = useSocialAccounts()
+  const { data: aiResp, loading: loadingAI } = useAIConfig()
+  const { data: postsResp, loading: loadingPosts } = usePosts()
 
-  const [recentPosts] = useState([
-    {
-      id: 1,
-      platform: "Instagram",
-      content: "Dicas de produtividade para empreendedores...",
-      status: "published",
-      date: "2024-01-15",
-      engagement: { likes: 45, comments: 12, views: 234 },
-    },
-    {
-      id: 2,
-      platform: "LinkedIn",
-      content: "Como a IA está transformando o marketing digital...",
-      status: "scheduled",
-      date: "2024-01-16",
-      engagement: { likes: 0, comments: 0, views: 0 },
-    },
-    {
-      id: 3,
-      platform: "Instagram",
-      content: "Tendências de design para 2024...",
-      status: "failed",
-      date: "2024-01-14",
-      engagement: { likes: 0, comments: 0, views: 0 },
-    },
-  ])
+  const accounts = useMemo(() => {
+    const list: any[] = Array.isArray((accountsResp as any)?.accounts) ? (accountsResp as any).accounts : []
+    return list
+  }, [accountsResp])
+
+  const posts = useMemo(() => {
+    return Array.isArray(postsResp as any) ? (postsResp as any) : []
+  }, [postsResp])
+
+  const aiConfig = useMemo(() => {
+    return (aiResp as any)?.config || null
+  }, [aiResp])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -128,13 +134,21 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Posts este mês</p>
-                  <p className="text-2xl font-bold text-gray-900">24</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {loadingPosts ? "…" : posts.filter((p: any) => {
+                      const d = p.created_at ? new Date(p.created_at) : null
+                      const now = new Date()
+                      return (
+                        d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+                      )
+                    }).length}
+                  </p>
                 </div>
                 <Calendar className="w-8 h-8 text-blue-600" />
               </div>
               <div className="mt-4">
-                <Progress value={80} className="h-2" />
-                <p className="text-xs text-gray-500 mt-2">80% da meta mensal</p>
+                <Progress value={loadingPosts ? 0 : Math.min(100, posts.length * 4)} className="h-2" />
+                <p className="text-xs text-gray-500 mt-2">{loadingPosts ? "Carregando…" : "Progresso mensal"}</p>
               </div>
             </CardContent>
           </Card>
@@ -144,13 +158,15 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Redes conectadas</p>
-                  <p className="text-2xl font-bold text-gray-900">2/4</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {loadingAccounts ? "…" : `${accounts.length}/4`}
+                  </p>
                 </div>
                 <Users className="w-8 h-8 text-green-600" />
               </div>
               <div className="mt-4">
-                <Progress value={50} className="h-2" />
-                <p className="text-xs text-gray-500 mt-2">Conecte mais redes</p>
+                <Progress value={loadingAccounts ? 0 : Math.min(100, (accounts.length / 4) * 100)} className="h-2" />
+                <p className="text-xs text-gray-500 mt-2">{loadingAccounts ? "Carregando…" : "Conecte mais redes"}</p>
               </div>
             </CardContent>
           </Card>
@@ -159,13 +175,17 @@ export default function DashboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Engajamento</p>
-                  <p className="text-2xl font-bold text-gray-900">1.2K</p>
+                  <p className="text-sm font-medium text-gray-600">Engajamento (visualizações)</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {loadingPosts
+                      ? "…"
+                      : posts.reduce((sum: number, p: any) => sum + (p.views_count || 0), 0).toLocaleString("pt-BR")}
+                  </p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-purple-600" />
               </div>
               <div className="mt-4">
-                <p className="text-xs text-green-600">+15% vs mês anterior</p>
+                <p className="text-xs text-gray-500">Baseado nos posts recentes</p>
               </div>
             </CardContent>
           </Card>
@@ -175,12 +195,24 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Taxa de sucesso</p>
-                  <p className="text-2xl font-bold text-gray-900">94%</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {loadingPosts
+                      ? "…"
+                      : (() => {
+                          const total = posts.length || 1
+                          const ok = posts.filter((p: any) => p.status === "published").length
+                          return `${Math.round((ok / total) * 100)}%`
+                        })()}
+                  </p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
               <div className="mt-4">
-                <p className="text-xs text-gray-500">23/24 posts publicados</p>
+                <p className="text-xs text-gray-500">
+                  {loadingPosts
+                    ? "Carregando…"
+                    : `${posts.filter((p: any) => p.status === "published").length}/${posts.length} posts publicados`}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -238,19 +270,34 @@ export default function DashboardPage() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Temas configurados</span>
-                    <Badge variant="secondary">3 temas</Badge>
+                    <Badge variant="secondary">
+                      {loadingAI ? "…" : `${(aiConfig?.themes || []).length} temas`}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Posts por dia</span>
-                    <Badge variant="secondary">2 posts</Badge>
+                    <Badge variant="secondary">{loadingAI ? "…" : `${aiConfig?.posts_per_day || 0} posts`}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Horários definidos</span>
-                    <Badge className="bg-green-100 text-green-800">9h, 15h</Badge>
+                    <Badge className="bg-green-100 text-green-800">
+                      {loadingAI ? "…" : (aiConfig?.post_times || []).join(", ")}
+                    </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Próximo post</span>
-                    <Badge className="bg-blue-100 text-blue-800">Hoje às 15h</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">
+                      {loadingPosts
+                        ? "…"
+                        : (() => {
+                            const next = [...posts]
+                              .filter((p: any) => p.status === "scheduled" && p.scheduled_for)
+                              .sort((a: any, b: any) =>
+                                new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime(),
+                              )[0]
+                            return next ? formatDate(next.scheduled_for) : "Nenhum post agendado"
+                          })()}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -265,29 +312,37 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentPosts.map((post) => (
+                  {loadingPosts && <p className="text-sm text-gray-500">Carregando posts…</p>}
+                  {!loadingPosts && posts.length === 0 && (
+                    <p className="text-sm text-gray-500">Nenhum post encontrado</p>
+                  )}
+                  {!loadingPosts && posts.map((post: any) => (
                     <div key={post.id} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">{post.platform}</Badge>
+                          <Badge variant="outline">
+                            {getPlatformMeta(post?.social_accounts?.platform || "").label}
+                          </Badge>
                           {getStatusBadge(post.status)}
                         </div>
                         <p className="text-sm text-gray-600 mb-2">{post.content}</p>
-                        <p className="text-xs text-gray-500">{post.date}</p>
+                        <p className="text-xs text-gray-500">
+                          {formatDate(post.published_at || post.scheduled_for || post.created_at)}
+                        </p>
                       </div>
                       {post.status === "published" && (
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <Eye className="w-4 h-4" />
-                            {post.engagement.views}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Heart className="w-4 h-4" />
-                            {post.engagement.likes}
+                            {post.views_count || 0}
                           </div>
                           <div className="flex items-center gap-1">
                             <MessageCircle className="w-4 h-4" />
-                            {post.engagement.comments}
+                            {post.comments_count || 0}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Share className="w-4 h-4" />
+                            {post.shares_count || 0}
                           </div>
                         </div>
                       )}
@@ -306,22 +361,31 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {connectedAccounts.map((account) => (
-                    <div key={account.platform} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <account.icon className={`w-6 h-6 ${account.color}`} />
-                        <div>
-                          <p className="font-medium">{account.platform}</p>
-                          <p className="text-sm text-gray-500">{account.connected ? "Conectado" : "Não conectado"}</p>
+                  {loadingAccounts && <p className="text-sm text-gray-500">Carregando contas…</p>}
+                  {!loadingAccounts && accounts.length === 0 && (
+                    <p className="text-sm text-gray-500">Nenhuma conta conectada</p>
+                  )}
+                  {!loadingAccounts &&
+                    accounts.map((acc: any) => {
+                      const meta = getPlatformMeta(acc.platform)
+                      const Icon = meta.icon
+                      return (
+                        <div key={acc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Icon className={`w-6 h-6 ${meta.color}`} />
+                            <div>
+                              <p className="font-medium">{meta.label}</p>
+                              <p className="text-sm text-gray-500">{acc.username || acc.display_name || "—"}</p>
+                            </div>
+                          </div>
+                          {acc.is_active ? (
+                            <Badge className="bg-green-100 text-green-800">Ativo</Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800">Inativo</Badge>
+                          )}
                         </div>
-                      </div>
-                      {account.connected ? (
-                        <Badge className="bg-green-100 text-green-800">Ativo</Badge>
-                      ) : (
-                        <Button size="sm">Conectar</Button>
-                      )}
-                    </div>
-                  ))}
+                      )
+                    })}
                 </div>
               </CardContent>
             </Card>

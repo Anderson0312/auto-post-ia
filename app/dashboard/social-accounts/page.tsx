@@ -50,11 +50,23 @@ export default function SocialAccountsPage() {
       }
     }
 
-    return base.map((p) => {
+    const list = base.map((p) => {
       const match = dbList.find((a) => (a.platform || "").toLowerCase() === p.slug)
       const connected = !!match && !!match.is_connected
       const active = !!match && !!match.is_active
-      const display = (match?.display_name || match?.username || "").trim()
+      const rawUser = (match?.username || "").trim()
+      const name = (match?.display_name || "").trim()
+      let display = ""
+      if (p.slug === "twitter") {
+        // Preferir @username; evitar exibir apenas ID numérico
+        if (rawUser && !/^\d+$/.test(rawUser)) {
+          display = `@${rawUser}`
+        } else {
+          display = name
+        }
+      } else {
+        display = name || rawUser
+      }
       const followers =
         typeof match?.followers_count === "number" && match.followers_count > 0 ? `${match.followers_count}` : "-"
       const lastPost = formatLastPost(match?.last_post_at)
@@ -71,6 +83,13 @@ export default function SocialAccountsPage() {
         followers,
         lastPost,
       }
+    })
+
+    // Ordenar: conectadas primeiro, depois ativas
+    return list.sort((a, b) => {
+      const byConnected = Number(b.connected) - Number(a.connected)
+      if (byConnected !== 0) return byConnected
+      return Number(b.active) - Number(a.active)
     })
   }, [data])
 
