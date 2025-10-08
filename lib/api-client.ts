@@ -1,43 +1,21 @@
 class APIClient {
   private baseURL: string
-  private token: string | null = null
 
   constructor() {
     this.baseURL = process.env.NEXT_PUBLIC_API_URL || ""
   }
 
-  setToken(token: string) {
-    this.token = token
-    if (typeof window !== "undefined") {
-      localStorage.setItem("auth_token", token)
-    }
-  }
-
-  getToken(): string | null {
-    if (this.token) return this.token
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("auth_token")
-    }
-    return null
-  }
-
-  clearToken() {
-    this.token = null
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token")
-    }
-  }
-
+  // Todas as requisições passam a usar cookies HttpOnly (credentials: 'include').
+  // Não usamos mais Authorization bearer nem localStorage.
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}/api${endpoint}`
-    const token = this.getToken()
 
     const config: RequestInit = {
       headers: {
         "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
+      credentials: "include",
       ...options,
     }
 

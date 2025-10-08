@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database"
 import bcrypt from "bcryptjs"
 import { signToken } from "@/lib/jwt"
+import { createUserSession, attachSessionCookie } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,17 +49,19 @@ export async function POST(request: NextRequest) {
       generate_images: true,
     })
 
-    // Generate JWT token
-    const token = await signToken({ userId: user.id, email: user.email })
+    // Create session and set cookie HttpOnly
+    const { sessionToken, expiresAt } = await createUserSession(user.id, request)
 
     // Return user data (without password)
     const { password: _, ...userWithoutPassword } = user
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       user: userWithoutPassword,
-      token,
+      token: await signToken({ userId: user.id, email: user.email }),
       message: "Conta criada com sucesso!",
     })
+    attachSessionCookie(res, sessionToken, expiresAt)
+    return res
   } catch (error) {
     console.error("Registration error:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { DatabaseService } from "@/lib/database"
-import { verifyJwt } from "@/lib/jwt"
+import { getUserIdFromRequest } from "@/lib/session"
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,28 +32,22 @@ export async function GET(req: NextRequest) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=missing_code_or_state")
     }
 
-    // Decodificar state (contém token do usuário e code_verifier)
-    let parsed: { token: string; cv: string } | null = null
+    // Decodificar state (apenas code_verifier)
+    let parsed: { cv: string } | null = null
     try {
       const json = Buffer.from(state, "base64url").toString("utf-8")
       const raw = JSON.parse(json)
-      parsed = { token: String(raw.token || ""), cv: String(raw.cv || "") }
+      parsed = { cv: String(raw.cv || "") }
     } catch (err) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=invalid_state")
     }
 
-    if (!parsed?.token || !parsed.cv) {
+    if (!parsed?.cv) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=incomplete_state")
     }
 
-    // Extrair userId do token
-    let userId: string | null = null
-    try {
-      const payload = await verifyJwt<{ userId: string }>(parsed.token)
-      userId = payload.userId
-    } catch (err) {
-      // inválido
-    }
+    // Identificar usuário pela sessão via cookie
+    const userId = await getUserIdFromRequest(request as any)
     if (!userId) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=unauthorized")
     }

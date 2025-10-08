@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { verifyToken } from "@/lib/jwt"
 import { supabaseAdmin } from "@/lib/database"
+import { getUserIdFromRequest } from "@/lib/session"
 
 async function fetchInstagramFollowers(accessToken: string, platformUserId: string): Promise<number | null> {
   try {
@@ -23,20 +23,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authHeader = request.headers.get("authorization") || request.headers.get("Authorization")
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null
-    if (!token) {
+    const userId = await getUserIdFromRequest(request)
+    if (!userId) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
     }
-
-    let payload: any
-    try {
-      payload = await verifyToken(token)
-    } catch (err) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 })
-    }
-
-    const userId = payload.userId
     const { id: accountId } = await params
 
     const { data: account, error: findErr } = await supabaseAdmin

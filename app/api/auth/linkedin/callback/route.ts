@@ -1,5 +1,5 @@
 import { DatabaseService } from "@/lib/database"
-import { verifyJwt } from "@/lib/jwt"
+import { getUserIdFromRequest } from "@/lib/session"
 
 export async function GET(req: Request) {
   try {
@@ -25,16 +25,8 @@ export async function GET(req: Request) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=missing_code")
     }
 
-    // Decode state (JWT token) to identify the user
-    let userId: string | null = null
-    if (state) {
-      try {
-        const payload = await verifyJwt<{ userId: string }>(state)
-        userId = payload.userId
-      } catch (err) {
-        console.error("Invalid LinkedIn state token:", err)
-      }
-    }
+    // Identificar usuário pela sessão (cookie HttpOnly)
+    const userId = await getUserIdFromRequest(request as any)
 
     if (!userId) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=unauthorized")

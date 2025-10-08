@@ -75,9 +75,9 @@ LINKEDIN_SCOPES=r_liteprofile w_member_social
 
 ### Fluxo de conexão
 
-- Na página de contas sociais, ao clicar em "Conectar" para uma plataforma, o app redireciona para `/api/auth/{plataforma}?token={JWT}`.
-- Para LinkedIn, o endpoint `/api/auth/linkedin` redireciona ao consentimento (OAuth) com `state` contendo o token do usuário.
+- Na página de contas sociais, ao clicar em "Conectar" para uma plataforma, o app redireciona para `/api/auth/{plataforma}` usando a sessão via cookie HttpOnly.
+- Para LinkedIn, o endpoint `/api/auth/linkedin` redireciona ao consentimento (OAuth) com `state` usado apenas para proteção CSRF; a identificação do usuário é feita no callback pela sessão (cookie).
 - O callback `/api/auth/linkedin/callback` troca o `code` por `access_token`, busca o perfil e salva/upserta a conta no banco.
 - Após sucesso, o usuário é redirecionado de volta à página `dashboard/social-accounts` com `?status=success&platform=linkedin`.
 
-Observação: esteja autenticado (token válido no localStorage) antes de iniciar a conexão, pois o token é usado para vincular a conta ao seu usuário.
+Observação: esteja autenticado via sessão (cookie HttpOnly). Não usamos localStorage nem cabeçalho Authorization/Bearer para identificar o usuário no fluxo de conexão.

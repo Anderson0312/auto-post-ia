@@ -1,22 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { AIService, type PostGenerationRequest } from "@/lib/ai-service"
 import { DatabaseService } from "@/lib/database"
-import { verifyToken } from "@/lib/jwt"
+import { getUserIdFromRequest } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
-
-    if (!token) {
-      return NextResponse.json({ error: "Token não fornecido" }, { status: 401 })
+    const userId = await getUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
-
-    const payload = verifyToken(token)
-    if (!payload) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 })
-    }
-
-    const userId = payload.userId
     const body = await request.json()
 
     const { themes, platform, customInstructions, generateImage = false } = body

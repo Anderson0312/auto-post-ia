@@ -3,7 +3,6 @@ export async function GET(req: Request) {
   const clientId = process.env.TWITTER_CLIENT_ID
   const redirectUri = process.env.TWITTER_REDIRECT_URI
   const rawScopes = (process.env.TWITTER_SCOPES || "tweet.read users.read offline.access").trim()
-  const token = url.searchParams.get("token") || ""
 
   if (!clientId || !redirectUri) {
     return new Response(JSON.stringify({ error: "Configuração do Twitter ausente" }), {
@@ -18,8 +17,8 @@ export async function GET(req: Request) {
   const verifier = makeBase64Url(randomBytes(32))
   const challenge = makeBase64Url(createHash("sha256").update(verifier).digest())
 
-  // Codificar state com token do usuário e code_verifier
-  const statePayload = { token, cv: verifier }
+  // Codificar state apenas com code_verifier (token removido)
+  const statePayload = { cv: verifier }
   const state = encodeURIComponent(Buffer.from(JSON.stringify(statePayload)).toString("base64url"))
   const scope = encodeURIComponent(rawScopes.replace(/\s+/g, " "))
 

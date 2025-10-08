@@ -289,10 +289,9 @@ export default function SocialAccountsPage() {
                       ) : (
                         <Button
                           onClick={() => {
-                            const token = apiClient.getToken() || ""
                             const slug = account.platform.toLowerCase()
-                            const url = `/api/auth/${slug}?token=${encodeURIComponent(token)}`
-                            window.location.href = url
+                            // Sessão via cookie HttpOnly: sem token na URL
+                            window.location.href = `/api/auth/${slug}`
                           }}
                         >
                           <ExternalLink className="w-4 h-4 mr-2" />

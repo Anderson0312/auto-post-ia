@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database"
 import { signToken } from "@/lib/jwt"
+import { createUserSession, attachSessionCookie } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,8 +12,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Usuário demo não encontrado" }, { status: 404 })
     }
 
-    // Generate JWT token for demo user
-    const token = await signToken({ userId: demoUser.id, email: demoUser.email }, "2h")
+    // Create session and set cookie for demo user
+    const { sessionToken, expiresAt } = await createUserSession(demoUser.id, request)
 
     // Update last login
     await DatabaseService.updateUser(demoUser.id, {
@@ -22,12 +23,14 @@ export async function POST(request: NextRequest) {
     // Return user data (without password)
     const { password: _, ...userWithoutPassword } = demoUser
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       user: userWithoutPassword,
-      token,
+      token: await signToken({ userId: demoUser.id, email: demoUser.email }, "2h"),
       message: "Acesso demo autorizado!",
       isDemo: true,
     })
+    attachSessionCookie(res, sessionToken, expiresAt)
+    return res
   } catch (error) {
     console.error("Demo login error:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

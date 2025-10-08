@@ -1,24 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database"
-import { verifyToken } from "@/lib/jwt"
+import { getUserIdFromRequest } from "@/lib/session"
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = request.headers.get("authorization")?.replace("Bearer ", "")
-
-    if (!token) {
-      return NextResponse.json({ error: "Token não fornecido" }, { status: 401 })
+    const userId = await getUserIdFromRequest(request)
+    if (!userId) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
-
-    const payload = await verifyToken(token)
-    if (!payload) {
-      return NextResponse.json({ error: "Token inválido" }, { status: 401 })
-    }
-
-    const userId = payload.userId
     const { id: themeId } = await params
 
     if (!themeId) {

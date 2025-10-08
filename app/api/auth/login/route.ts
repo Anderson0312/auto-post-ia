@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database"
 import bcrypt from "bcryptjs"
 import { signToken } from "@/lib/jwt"
+import { createUserSession, attachSessionCookie } from "@/lib/session"
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,8 +25,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Credenciais inválidas" }, { status: 401 })
     }
 
-    // Generate JWT token
-    const token = await signToken({ userId: user.id, email: user.email })
+    // Generate session and set cookie HttpOnly
+    const { sessionToken, expiresAt } = await createUserSession(user.id, request)
 
     // Update last login
     await DatabaseService.updateUser(user.id, {
@@ -35,11 +36,14 @@ export async function POST(request: NextRequest) {
     // Return user data (without password)
     const { password: _, ...userWithoutPassword } = user
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       user: userWithoutPassword,
-      token,
+      // Mantemos o campo token por compatibilidade, porém o cliente não armazena.
+      token: await signToken({ userId: user.id, email: user.email }),
       message: "Login realizado com sucesso!",
     })
+    attachSessionCookie(res, sessionToken, expiresAt)
+    return res
   } catch (error) {
     console.error("Login error:", error)
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })

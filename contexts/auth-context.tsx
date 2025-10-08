@@ -47,17 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const token = apiClient.getToken()
-      if (!token) {
-        setLoading(false)
-        return
-      }
-
       const response = await apiClient.getProfile()
       setUser(response.user)
     } catch (error) {
       console.error("Auth check failed:", error)
-      apiClient.clearToken()
     } finally {
       setLoading(false)
     }
@@ -66,7 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     try {
       const response = await apiClient.login({ email, password })
-      apiClient.setToken(response.token)
       setUser(response.user)
     } catch (error) {
       throw error
@@ -76,7 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginDemo = async () => {
     try {
       const response = await apiClient.loginDemo()
-      apiClient.setToken(response.token)
       setUser(response.user)
     } catch (error) {
       throw error
@@ -91,15 +82,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) => {
     try {
       const response = await apiClient.register(data)
-      apiClient.setToken(response.token)
       setUser(response.user)
     } catch (error) {
       throw error
     }
   }
 
-  const logout = () => {
-    apiClient.clearToken()
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+    } catch (e) {
+      // ignore errors, apenas limpa estado local
+    }
     setUser(null)
   }
 
