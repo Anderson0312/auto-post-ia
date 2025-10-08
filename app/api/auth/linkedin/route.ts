@@ -11,7 +11,9 @@ export async function GET(req: Request) {
     })
   }
 
-  const scope = encodeURIComponent("r_liteprofile r_emailaddress w_member_social")
+  // Allow configuring scopes via env. Default to minimal scope to avoid unauthorized errors.
+  const rawScopes = process.env.LINKEDIN_SCOPES?.trim() || "r_liteprofile"
+  const scope = encodeURIComponent(rawScopes.replace(/\s+/g, " "))
   const state = encodeURIComponent(token)
 
   const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&state=${state}`

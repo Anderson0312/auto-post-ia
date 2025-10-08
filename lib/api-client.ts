@@ -234,6 +234,12 @@ class APIClient {
     })
   }
 
+  async refreshFollowersCount(accountId: string) {
+    return this.request<any>(`/social/accounts/${accountId}/refresh-followers`, {
+      method: "POST",
+    })
+  }
+
   // Posts methods
   async getPosts(limit = 50) {
     return this.request<any[]>(`/posts?limit=${limit}`)

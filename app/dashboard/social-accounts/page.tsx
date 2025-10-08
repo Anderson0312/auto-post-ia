@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useSocialAccounts } from "@/hooks/use-api"
 import { apiClient } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
 import {
   Instagram,
   Facebook,
@@ -23,77 +25,111 @@ import {
 import Link from "next/link"
 
 export default function SocialAccountsPage() {
-  const [accounts, setAccounts] = useState([
-    {
-      id: 1,
-      platform: "Instagram",
-      username: "@meuinstagram",
-      connected: true,
-      active: true,
-      icon: Instagram,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
-      followers: "2.5K",
-      lastPost: "2 horas atrás",
-    },
-    {
-      id: 2,
-      platform: "LinkedIn",
-      username: "Meu Perfil LinkedIn",
-      connected: true,
-      active: true,
-      icon: Linkedin,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      followers: "1.2K",
-      lastPost: "1 dia atrás",
-    },
-    {
-      id: 3,
-      platform: "Facebook",
-      username: "",
-      connected: false,
-      active: false,
-      icon: Facebook,
-      color: "text-blue-700",
-      bgColor: "bg-blue-50",
-      followers: "-",
-      lastPost: "-",
-    },
-    {
-      id: 4,
-      platform: "Twitter",
-      username: "",
-      connected: false,
-      active: false,
-      icon: Twitter,
-      color: "text-black",
-      bgColor: "bg-gray-50",
-      followers: "-",
-      lastPost: "-",
-    },
-  ])
+  const { data, loading, error, refetch } = useSocialAccounts()
+  const { toast } = useToast()
+  const [refreshingId, setRefreshingId] = useState<string | null>(null)
 
-  const toggleAccountActive = (accountId: number) => {
-    setAccounts(
-      accounts.map((account) => (account.id === accountId ? { ...account, active: !account.active } : account)),
-    )
+  const accounts = useMemo(() => {
+    const base = [
+      { id: 1, platform: "Instagram", slug: "instagram", icon: Instagram, color: "text-pink-600", bgColor: "bg-pink-50" },
+      { id: 2, platform: "LinkedIn", slug: "linkedin", icon: Linkedin, color: "text-blue-600", bgColor: "bg-blue-50" },
+      { id: 3, platform: "Facebook", slug: "facebook", icon: Facebook, color: "text-blue-700", bgColor: "bg-blue-50" },
+      { id: 4, platform: "Twitter", slug: "twitter", icon: Twitter, color: "text-black", bgColor: "bg-gray-50" },
+    ] as const
+
+    const dbList: any[] = Array.isArray((data as any)?.accounts) ? (data as any).accounts : []
+
+    const formatLastPost = (iso?: string | null) => {
+      if (!iso) return "-"
+      try {
+        const d = new Date(iso)
+        if (Number.isNaN(d.getTime())) return "-"
+        return d.toLocaleString()
+      } catch {
+        return "-"
+      }
+    }
+
+    return base.map((p) => {
+      const match = dbList.find((a) => (a.platform || "").toLowerCase() === p.slug)
+      const connected = !!match && !!match.is_connected
+      const active = !!match && !!match.is_active
+      const display = (match?.display_name || match?.username || "").trim()
+      const followers =
+        typeof match?.followers_count === "number" && match.followers_count > 0 ? `${match.followers_count}` : "-"
+      const lastPost = formatLastPost(match?.last_post_at)
+
+      return {
+        id: match?.id ?? p.id,
+        platform: p.platform,
+        username: display,
+        connected,
+        active,
+        icon: p.icon,
+        color: p.color,
+        bgColor: p.bgColor,
+        followers,
+        lastPost,
+      }
+    })
+  }, [data])
+
+  const toggleAccountActive = async (accountId: number, active: boolean) => {
+    try {
+      await apiClient.toggleSocialAccount(String(accountId), active)
+      await refetch()
+      toast({ title: "Status atualizado", description: `Conta ${active ? "ativada" : "desativada"}` })
+    } catch (err) {
+      toast({ title: "Erro", description: "Não foi possível atualizar o status", variant: "destructive" })
+    }
   }
 
-  const connectAccount = (platform: string) => {
-    // Simular conexão
-    alert(`Conectando com ${platform}...`)
-  }
-
-  const disconnectAccount = (accountId: number) => {
+  const disconnectAccount = async (accountId: number) => {
     if (confirm("Tem certeza que deseja desconectar esta conta?")) {
-      setAccounts(
-        accounts.map((account) =>
-          account.id === accountId
-            ? { ...account, connected: false, active: false, username: "", followers: "-", lastPost: "-" }
-            : account,
-        ),
-      )
+      try {
+        await apiClient.disconnectSocialAccount(String(accountId))
+        await refetch()
+        toast({ title: "Conta desconectada", description: "A conta foi desconectada com sucesso" })
+      } catch (err) {
+        toast({ title: "Erro", description: "Não foi possível desconectar a conta", variant: "destructive" })
+      }
+    }
+  }
+
+  const humanizeFollowersRefreshReason = (reason?: string) => {
+    switch (reason) {
+      case "instagram_graph_unavailable_or_permissions":
+        return "Instagram requer conta Business/Creator e permissões corretas."
+      case "missing_token_or_platform_user_id":
+        return "A conta não possui token ou ID da plataforma."
+      case "linkedin_not_supported_for_personal_profiles":
+      case "linkedin_not_support_for_personal_profiles":
+        return "LinkedIn não fornece contagem de seguidores para perfis pessoais."
+      case "facebook_requires_page_token_and_graph_endpoint":
+        return "Facebook requer token de página e Graph API (Page)."
+      case "twitter_not_supported_without_enterprise_api":
+        return "Twitter/X requer API paga."
+      case "platform_not_supported":
+        return "Plataforma não suportada no momento."
+      default:
+        return "Não foi possível atualizar seguidores."
+    }
+  }
+
+  const refreshFollowers = async (accountId: string) => {
+    try {
+      setRefreshingId(accountId)
+      const res = await apiClient.refreshFollowersCount(accountId)
+      await refetch()
+      const followers = typeof res?.followers_count === "number" ? res.followers_count : undefined
+      const msg = res?.updated
+        ? `Seguidores atualizados: ${followers}`
+        : `Sem atualização: ${humanizeFollowersRefreshReason(res?.reason)}`
+      toast({ title: "Atualizar seguidores", description: msg })
+    } catch (err) {
+      toast({ title: "Erro", description: "Falha ao atualizar seguidores", variant: "destructive" })
+    } finally {
+      setRefreshingId(null)
     }
   }
 
@@ -153,8 +189,8 @@ export default function SocialAccountsPage() {
                     {accounts
                       .filter((acc) => acc.connected)
                       .reduce((total, acc) => {
-                        const followers = acc.followers.replace("K", "000").replace(".", "")
-                        return total + (followers !== "-" ? Number.parseInt(followers) : 0)
+                        const followers = acc.followers?.toString().replace("K", "000").replace(".", "")
+                        return total + (followers && followers !== "-" ? Number.parseInt(followers) : 0)
                       }, 0)
                       .toLocaleString()}
                   </p>
@@ -207,14 +243,25 @@ export default function SocialAccountsPage() {
                         <>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600">Ativo</span>
-                            <Switch checked={account.active} onCheckedChange={() => toggleAccountActive(account.id)} />
+                            <Switch
+                              checked={account.active}
+                              onCheckedChange={(val) => toggleAccountActive(Number(account.id), val)}
+                            />
                           </div>
 
-                          <Button variant="outline" size="sm">
+                          {/* <Button variant="outline" size="sm">
                             <Settings className="w-4 h-4 mr-2" />
                             Configurar
-                          </Button>
+                          </Button> */}
 
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={!account.connected || refreshingId === String(account.id)}
+                            onClick={() => refreshFollowers(String(account.id))}
+                          >
+                            {refreshingId === String(account.id) ? "Atualizando..." : "Atualizar seguidores"}
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => disconnectAccount(account.id)}>
                             <Trash2 className="w-4 h-4 mr-2" />
                             Desconectar

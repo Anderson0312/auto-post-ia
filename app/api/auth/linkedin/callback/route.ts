@@ -5,10 +5,24 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url)
     const code = url.searchParams.get("code")
+    const oauthError = url.searchParams.get("error")
     const state = url.searchParams.get("state") || ""
 
+    const makeRedirect = (pathWithQuery: string) => {
+      const target = new URL(pathWithQuery, url.origin)
+      return Response.redirect(target.toString())
+    }
+
+    // Handle OAuth errors returned by LinkedIn
+    if (oauthError) {
+      const desc = url.searchParams.get("error_description") || oauthError
+      const reason = encodeURIComponent(oauthError)
+      const details = encodeURIComponent(desc)
+      return makeRedirect(`/dashboard/social-accounts?status=error&reason=${reason}&details=${details}`)
+    }
+
     if (!code) {
-      return Response.redirect("/dashboard/social-accounts?status=error&reason=missing_code")
+      return makeRedirect("/dashboard/social-accounts?status=error&reason=missing_code")
     }
 
     // Decode state (JWT token) to identify the user
@@ -23,7 +37,7 @@ export async function GET(req: Request) {
     }
 
     if (!userId) {
-      return Response.redirect("/dashboard/social-accounts?status=error&reason=unauthorized")
+      return makeRedirect("/dashboard/social-accounts?status=error&reason=unauthorized")
     }
 
     const clientId = process.env.LINKEDIN_CLIENT_ID
@@ -31,7 +45,7 @@ export async function GET(req: Request) {
     const redirectUri = process.env.LINKEDIN_REDIRECT_URI
 
     if (!clientId || !clientSecret || !redirectUri) {
-      return Response.redirect("/dashboard/social-accounts?status=error&reason=misconfigured")
+      return makeRedirect("/dashboard/social-accounts?status=error&reason=misconfigured")
     }
 
     // Exchange authorization code for access token
@@ -50,49 +64,81 @@ export async function GET(req: Request) {
     if (!tokenResponse.ok) {
       const errText = await tokenResponse.text()
       console.error("LinkedIn token exchange failed:", errText)
-      return Response.redirect("/dashboard/social-accounts?status=error&reason=token_exchange_failed")
+      return makeRedirect("/dashboard/social-accounts?status=error&reason=token_exchange_failed")
     }
 
     const tokenData = await tokenResponse.json()
     const accessToken: string = tokenData.access_token
     const expiresIn: number = tokenData.expires_in
 
-    // Fetch profile info
-    const profileRes = await fetch("https://api.linkedin.com/v2/me", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    // Determine if we should use OpenID Connect userinfo endpoint
+    const rawScopes = (process.env.LINKEDIN_SCOPES || "").trim()
+    const requestedScopes = rawScopes.split(/\s+/).filter(Boolean)
+    const useOIDC = requestedScopes.includes("openid")
 
-    if (!profileRes.ok) {
-      const errText = await profileRes.text()
-      console.error("LinkedIn profile fetch failed:", errText)
-      return Response.redirect("/dashboard/social-accounts?status=error&reason=profile_failed")
-    }
+    let platformUserId = ""
+    let displayName = ""
+    let username = ""
 
-    const profile = await profileRes.json()
-    const platformUserId: string = profile.id
-    const firstName = profile.localizedFirstName || ""
-    const lastName = profile.localizedLastName || ""
-
-    // Fetch email (optional)
-    let username = platformUserId
-    try {
-      const emailRes = await fetch(
-        "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        },
-      )
-      if (emailRes.ok) {
-        const emailData = await emailRes.json()
-        const elements = emailData.elements || []
-        const email = elements[0]?.["handle~"]?.emailAddress
-        if (email) username = email
+    if (useOIDC) {
+      // Use the OIDC-compliant userinfo endpoint when 'openid' scope is requested
+      const userinfoRes = await fetch("https://api.linkedin.com/v2/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (!userinfoRes.ok) {
+        const errText = await userinfoRes.text()
+        console.error("LinkedIn userinfo fetch failed:", errText)
+        return makeRedirect("/dashboard/social-accounts?status=error&reason=profile_failed")
       }
-    } catch (err) {
-      console.warn("LinkedIn email fetch failed:", err)
+      const userinfo = await userinfoRes.json()
+      platformUserId = userinfo.sub
+      displayName = (userinfo.name || `${userinfo.given_name || ""} ${userinfo.family_name || ""}`.trim()).trim()
+      username = userinfo.email || platformUserId
+    } else {
+      // Fallback to classic profile endpoints (require r_liteprofile / r_emailaddress)
+      const apiVersion = process.env.LINKEDIN_API_VERSION || "202405"
+      const commonHeaders = {
+        Authorization: `Bearer ${accessToken}`,
+        "X-Restli-Protocol-Version": "2.0.0",
+        "LinkedIn-Version": apiVersion,
+      }
+
+      // Fetch profile info
+      const profileRes = await fetch("https://api.linkedin.com/v2/me", {
+        headers: commonHeaders,
+      })
+
+      if (!profileRes.ok) {
+        const errText = await profileRes.text()
+        console.error("LinkedIn profile fetch failed:", errText)
+        return makeRedirect("/dashboard/social-accounts?status=error&reason=profile_failed")
+      }
+
+      const profile = await profileRes.json()
+      platformUserId = profile.id
+      const firstName = profile.localizedFirstName || ""
+      const lastName = profile.localizedLastName || ""
+
+      // Fetch email (optional)
+      username = platformUserId
+      try {
+        const emailRes = await fetch(
+          "https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))",
+          { headers: commonHeaders },
+        )
+        if (emailRes.ok) {
+          const emailData = await emailRes.json()
+          const elements = emailData.elements || []
+          const email = elements[0]?.["handle~"]?.emailAddress
+          if (email) username = email
+        }
+      } catch (err) {
+        console.warn("LinkedIn email fetch failed:", err)
+      }
+
+      displayName = `${firstName} ${lastName}`.trim()
     }
 
-    const displayName = `${firstName} ${lastName}`.trim()
     const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
     // Upsert social account
@@ -125,9 +171,17 @@ export async function GET(req: Request) {
       })
     }
 
-    return Response.redirect("/dashboard/social-accounts?status=success&platform=linkedin")
+    return makeRedirect("/dashboard/social-accounts?status=success&platform=linkedin")
   } catch (error) {
     console.error("LinkedIn callback error:", error)
-    return Response.redirect("/dashboard/social-accounts?status=error&reason=unknown")
+    const origin = (() => {
+      try {
+        return new URL(req.url).origin
+      } catch {
+        return "http://localhost:3000"
+      }
+    })()
+    const target = new URL("/dashboard/social-accounts?status=error&reason=unknown", origin)
+    return Response.redirect(target.toString())
   }
 }

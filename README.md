@@ -39,6 +39,25 @@ Para conectar contas do LinkedIn na página `dashboard/social-accounts`, configu
 - Configure os escopos: `r_liteprofile`, `r_emailaddress`, `w_member_social`
 - Adicione o Redirect URL: `http://localhost:3000/api/auth/linkedin/callback` (ajuste para produção)
 
+### Produtos e escopos
+
+O LinkedIn possui dois produtos para autenticação/autorização que liberam escopos diferentes. É importante alinhar os escopos usados no app com os produtos habilitados na sua aplicação:
+
+- **Share on LinkedIn (Compartilhe no LinkedIn)**
+  - Libera o escopo: `w_member_social` (necessário para publicar posts via API `ugcPosts`).
+- **Sign In with LinkedIn (OAuth clássico)**
+  - Libera: `r_liteprofile` e (mediante aprovação) `r_emailaddress`.
+- **Sign In with LinkedIn usando OpenID Connect (OIDC)**
+  - Libera escopos OIDC: `openid profile email`.
+  - Se usar OIDC, não use `r_liteprofile`/`r_emailaddress`; utilize `openid profile email`.
+
+Nosso endpoint de autorização aceita escopos via variável `LINKEDIN_SCOPES`. Exemplos:
+
+- Com OAuth clássico: `LINKEDIN_SCOPES=r_liteprofile r_emailaddress w_member_social`
+- Com OIDC: `LINKEDIN_SCOPES=openid profile email` (adicione `w_member_social` se também for publicar)
+
+Observação: o fluxo atual de callback busca o perfil com `GET /v2/me` (requer `r_liteprofile`) e o e-mail com `GET /v2/emailAddress` (requer `r_emailaddress`). Se você optar por OIDC, a informação de perfil/e-mail pode vir no `id_token` (escopos `profile`/`email`) — neste caso ajuste os escopos e considere personalizar o callback para ler o `id_token`.
+
 ### Variáveis de ambiente
 
 Adicione no `.env.local`:
@@ -51,6 +70,7 @@ JWT_SECRET=uma_chave_secreta_segura
 NEXT_PUBLIC_SUPABASE_URL=...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
+LINKEDIN_SCOPES=r_liteprofile w_member_social
 ```
 
 ### Fluxo de conexão

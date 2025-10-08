@@ -2,7 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 import { DatabaseService } from "@/lib/database"
 import { verifyToken } from "@/lib/jwt"
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const token = request.headers.get("authorization")?.replace("Bearer ", "")
 
@@ -10,13 +13,13 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Token não fornecido" }, { status: 401 })
     }
 
-    const payload = verifyToken(token)
+    const payload = await verifyToken(token)
     if (!payload) {
       return NextResponse.json({ error: "Token inválido" }, { status: 401 })
     }
 
     const userId = payload.userId
-    const themeId = params.id
+    const { id: themeId } = await params
 
     if (!themeId) {
       return NextResponse.json({ error: "ID do tema é obrigatório" }, { status: 400 })
