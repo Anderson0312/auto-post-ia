@@ -37,71 +37,70 @@ export async function GET(req: NextRequest) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=unauthorized")
     }
 
-    const clientId = process.env.INSTAGRAM_CLIENT_ID
-    const clientSecret = process.env.INSTAGRAM_CLIENT_SECRET
-    const redirectUri = process.env.INSTAGRAM_REDIRECT_URI
+    const clientId = process.env.FACEBOOK_CLIENT_ID
+    const clientSecret = process.env.FACEBOOK_CLIENT_SECRET
+    const redirectUri = process.env.FACEBOOK_REDIRECT_URI
 
     if (!clientId || !clientSecret || !redirectUri) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=misconfigured")
     }
 
-    // Trocar code por access token (Instagram Basic Display)
-    const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: clientId,
-        client_secret: clientSecret,
-        grant_type: "authorization_code",
-        redirect_uri: redirectUri,
-        code,
-      }),
-    })
-
+    // Trocar code por access token (Facebook)
+    const tokenRes = await fetch(
+      `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(
+        redirectUri,
+      )}&client_secret=${encodeURIComponent(clientSecret)}&code=${encodeURIComponent(code)}`,
+    )
     if (!tokenRes.ok) {
       const errText = await tokenRes.text()
-      console.error("Instagram token exchange failed:", errText)
+      console.error("Facebook token exchange failed:", errText)
       return makeRedirect("/dashboard/social-accounts?status=error&reason=token_exchange_failed")
     }
 
     const tokenJson = await tokenRes.json()
     let accessToken: string = tokenJson.access_token
-    const userIdFromToken: string = String(tokenJson.user_id || "")
+    let expiresIn: number | null = tokenJson.expires_in ? Number(tokenJson.expires_in) : null
 
     // Optional: tentar converter para long-lived token
     try {
       const longRes = await fetch(
-        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(
-          clientSecret,
-        )}&access_token=${encodeURIComponent(accessToken)}`,
+        `https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(
+          clientId,
+        )}&client_secret=${encodeURIComponent(clientSecret)}&fb_exchange_token=${encodeURIComponent(accessToken)}`,
       )
       if (longRes.ok) {
         const longJson = await longRes.json()
         accessToken = longJson.access_token || accessToken
-        // expires_in disponível em segundos (opcional)
+        expiresIn = longJson.expires_in ? Number(longJson.expires_in) : expiresIn
       }
     } catch (err) {
-      // ignore: alguns apps podem não ter permissão para troca
+      // ignore
     }
 
-    // Buscar username
-    let platformUserId = userIdFromToken
-    let username = userIdFromToken
-    try {
-      const meRes = await fetch(`https://graph.instagram.com/me?fields=id,username&access_token=${encodeURIComponent(accessToken)}`)
-      if (meRes.ok) {
-        const me = await meRes.json()
-        platformUserId = String(me.id || platformUserId)
-        username = String(me.username || username)
-      }
-    } catch (err) {
-      // silencioso
+    // Buscar perfil
+    let platformUserId = ""
+    let username = ""
+    let displayName = ""
+    const meRes = await fetch(
+      `https://graph.facebook.com/me?fields=id,name,email&access_token=${encodeURIComponent(accessToken)}`,
+    )
+    if (meRes.ok) {
+      const me = await meRes.json()
+      platformUserId = String(me.id || "")
+      displayName = String(me.name || platformUserId)
+      username = String(me.email || displayName)
+    } else {
+      const errText = await meRes.text()
+      console.error("Facebook userinfo failed:", errText)
+      return makeRedirect("/dashboard/social-accounts?status=error&reason=userinfo_failed")
     }
+
+    const tokenExpiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000).toISOString() : null
 
     // Upsert conta social
     let existing: any = null
     try {
-      existing = await DatabaseService.getSocialAccount(userId, "instagram", platformUserId)
+      existing = await DatabaseService.getSocialAccount(userId, "facebook", platformUserId)
     } catch (err) {
       // ignore
     }
@@ -109,8 +108,9 @@ export async function GET(req: NextRequest) {
     if (existing) {
       await DatabaseService.updateSocialAccount(existing.id, {
         username,
-        display_name: username,
+        display_name: displayName,
         access_token: accessToken,
+        token_expires_at: tokenExpiresAt,
         is_connected: true,
         is_active: true,
         updated_at: new Date().toISOString(),
@@ -118,17 +118,18 @@ export async function GET(req: NextRequest) {
     } else {
       await DatabaseService.createSocialAccount({
         user_id: userId,
-        platform: "instagram",
+        platform: "facebook",
         platform_user_id: platformUserId,
         username,
-        display_name: username,
+        display_name: displayName,
         access_token: accessToken,
+        token_expires_at: tokenExpiresAt,
       })
     }
 
-    return makeRedirect("/dashboard/social-accounts?status=success&platform=instagram")
+    return makeRedirect("/dashboard/social-accounts?status=success&platform=facebook")
   } catch (error) {
-    console.error("Instagram callback error:", error)
+    console.error("Facebook callback error:", error)
     const origin = (() => {
       try {
         return new URL(req.url).origin
