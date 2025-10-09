@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,74 +12,58 @@ import {
   Clock,
   Instagram,
   Linkedin,
+  Facebook,
+  Twitter,
+  Users,
   CheckCircle,
   AlertCircle,
   Eye,
   Edit,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import Link from "next/link"
+import { usePosts } from "@/hooks/use-api"
+import { ptBR } from "date-fns/locale"
+import { addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, format } from "date-fns"
+
+// Helper para mapear plataforma -> ícone/cores/label
+function getPlatformMeta(platform: string) {
+  const key = String(platform || "").toLowerCase()
+  switch (key) {
+    case "instagram":
+      return { icon: Instagram, color: "text-pink-600", label: "Instagram" }
+    case "linkedin":
+      return { icon: Linkedin, color: "text-blue-600", label: "LinkedIn" }
+    case "facebook":
+      return { icon: Facebook, color: "text-blue-700", label: "Facebook" }
+    case "twitter":
+      return { icon: Twitter, color: "text-black", label: "Twitter" }
+    default:
+      return { icon: Users, color: "text-gray-700", label: platform || "—" }
+  }
+}
 
 export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [currentMonth, setCurrentMonth] = useState<Date>(selectedDate || new Date())
 
-  const [scheduledPosts] = useState([
-    {
-      id: 1,
-      date: "2024-01-16",
-      time: "09:00",
-      platform: "Instagram",
-      icon: Instagram,
-      color: "text-pink-600",
-      content: "Dicas de produtividade para começar a semana com energia! ✨ Como você organiza suas tarefas?",
-      status: "scheduled",
-      image: true,
-    },
-    {
-      id: 2,
-      date: "2024-01-16",
-      time: "15:00",
-      platform: "LinkedIn",
-      icon: Linkedin,
-      color: "text-blue-600",
-      content: "A importância da automação no marketing digital moderno. Veja como a IA está transformando...",
-      status: "scheduled",
-      image: true,
-    },
-    {
-      id: 3,
-      date: "2024-01-17",
-      time: "09:00",
-      platform: "Instagram",
-      icon: Instagram,
-      color: "text-pink-600",
-      content: "Tendências de design que vão dominar 2024. Qual é a sua favorita?",
-      status: "scheduled",
-      image: true,
-    },
-    {
-      id: 4,
-      date: "2024-01-15",
-      time: "15:00",
-      platform: "LinkedIn",
-      icon: Linkedin,
-      color: "text-blue-600",
-      content: "Como construir uma marca pessoal forte nas redes sociais...",
-      status: "published",
-      image: true,
-    },
-    {
-      id: 5,
-      date: "2024-01-15",
-      time: "09:00",
-      platform: "Instagram",
-      icon: Instagram,
-      color: "text-pink-600",
-      content: "Motivação para segunda-feira! Qual é o seu objetivo da semana?",
-      status: "failed",
-      image: false,
-    },
-  ])
+  const prevMonth = () => setCurrentMonth((prev) => subMonths(prev, 1))
+  const nextMonth = () => setCurrentMonth((prev) => addMonths(prev, 1))
+
+  const monthStart = startOfMonth(currentMonth)
+  const monthEnd = endOfMonth(currentMonth)
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+  const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
+
+  // Buscar posts reais do usuário
+  const { data: postsResp, loading: loadingPosts } = usePosts()
+
+  const posts = useMemo(() => {
+    return Array.isArray(postsResp as any) ? (postsResp as any) : []
+  }, [postsResp])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -109,11 +93,19 @@ export default function SchedulePage() {
     }
   }
 
+  // Filtra posts pela data selecionada (usa scheduled_for ou published_at)
   const getPostsForDate = (date: string) => {
-    return scheduledPosts.filter((post) => post.date === date)
+    return posts.filter((p: any) => {
+      const sched = p.scheduled_for ? new Date(p.scheduled_for) : null
+      const pub = p.published_at ? new Date(p.published_at) : null
+      const dStr = (d: Date) => d.toISOString().split("T")[0]
+      return (
+        (sched && dStr(sched) === date) || (pub && dStr(pub) === date)
+      )
+    })
   }
 
-  const formatDate = (dateString: string) => {
+  const formatSelectedDateLabel = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("pt-BR", {
       weekday: "long",
@@ -121,6 +113,16 @@ export default function SchedulePage() {
       month: "long",
       day: "numeric",
     })
+  }
+
+  const formatTime = (iso?: string | null) => {
+    if (!iso) return "—"
+    try {
+      const d = new Date(iso)
+      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+    } catch {
+      return "—"
+    }
   }
 
   return (
@@ -159,12 +161,46 @@ export default function SchedulePage() {
                   <CardDescription>Selecione uma data para ver os posts agendados</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border"
-                  />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <button onClick={prevMonth} className="h-7 w-7 rounded-md border text-gray-600 hover:bg-gray-100 flex items-center justify-center">
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <div className="text-sm font-medium">
+                        {format(currentMonth, "LLLL yyyy", { locale: ptBR })}
+                      </div>
+                      <button onClick={nextMonth} className="h-7 w-7 rounded-md border text-gray-600 hover:bg-gray-100 flex items-center justify-center">
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 text-center text-xs text-muted-foreground">
+                      {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((w) => (
+                        <div key={w} className="py-1 font-normal">{w}</div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1">
+                      {days.map((day) => {
+                        const isOutside = !isSameMonth(day, currentMonth)
+                        const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
+                        return (
+                          <button
+                            key={day.toISOString()}
+                            onClick={() => setSelectedDate(day)}
+                            className={[
+                              "aspect-square w-full rounded-md text-sm flex items-center justify-center",
+                              isOutside ? "text-muted-foreground opacity-50" : "text-gray-900",
+                              isSelected ? "bg-blue-600 text-white" : "hover:bg-gray-100",
+                            ].join(" ")}
+                            aria-label={format(day, "PPP", { locale: ptBR })}
+                          >
+                            {format(day, "d", { locale: ptBR })}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -172,50 +208,56 @@ export default function SchedulePage() {
               <Card className="lg:col-span-2">
                 <CardHeader>
                   <CardTitle>
-                    Posts para {selectedDate ? formatDate(selectedDate.toISOString().split("T")[0]) : "hoje"}
+                    Posts para {selectedDate ? formatSelectedDateLabel(selectedDate.toISOString().split("T")[0]) : "hoje"}
                   </CardTitle>
                   <CardDescription>
-                    {selectedDate ? getPostsForDate(selectedDate.toISOString().split("T")[0]).length : 0} posts
-                    agendados
+                    {selectedDate ? getPostsForDate(selectedDate.toISOString().split("T")[0]).length : 0} posts agendados
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {selectedDate && getPostsForDate(selectedDate.toISOString().split("T")[0]).length > 0 ? (
-                      getPostsForDate(selectedDate.toISOString().split("T")[0]).map((post) => (
-                        <div key={post.id} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <post.icon className={`w-5 h-5 ${post.color}`} />
-                              <span className="font-medium">{post.platform}</span>
-                              <Badge variant="outline">{post.time}</Badge>
-                              {getStatusBadge(post.status)}
+                    {loadingPosts ? (
+                      <div className="text-center py-8 text-gray-500">Carregando…</div>
+                    ) : selectedDate && getPostsForDate(selectedDate.toISOString().split("T")[0]).length > 0 ? (
+                      getPostsForDate(selectedDate.toISOString().split("T")[0]).map((post: any) => {
+                        const platform = post.social_accounts?.platform || post.platform
+                        const { icon: Icon, color, label } = getPlatformMeta(platform)
+                        const time = post.status === "published" ? formatTime(post.published_at) : formatTime(post.scheduled_for)
+                        return (
+                          <div key={post.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Icon className={`w-5 h-5 ${color}`} />
+                                <span className="font-medium">{label}</span>
+                                <Badge variant="outline">{time}</Badge>
+                                {getStatusBadge(post.status)}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
+                            <p className="text-sm text-gray-600">{post.content}</p>
+                            {post.image_url && (
+                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <div className="w-3 h-3 bg-gray-300 rounded"></div>
+                                {post.status === "scheduled" ? "Imagem será gerada automaticamente" : "Imagem incluída"}
+                              </div>
+                            )}
                           </div>
-                          <p className="text-sm text-gray-600">{post.content}</p>
-                          {post.image && (
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                              <div className="w-3 h-3 bg-gray-300 rounded"></div>
-                              Imagem será gerada automaticamente
-                            </div>
-                          )}
-                        </div>
-                      ))
+                        )
+                      })
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <CalendarIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Nenhum post agendado para esta data</p>
+                        <p>Nenhum post para esta data</p>
                       </div>
                     )}
                   </div>
@@ -232,42 +274,53 @@ export default function SchedulePage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {scheduledPosts.map((post) => (
-                    <div key={post.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <post.icon className={`w-5 h-5 ${post.color}`} />
-                          <span className="font-medium">{post.platform}</span>
-                          <Badge variant="outline">
-                            {formatDate(post.date)} às {post.time}
-                          </Badge>
-                          {getStatusBadge(post.status)}
+                  {loadingPosts && (
+                    <div className="text-center py-8 text-gray-500">Carregando…</div>
+                  )}
+                  {!loadingPosts && posts.map((post: any) => {
+                    const platform = post.social_accounts?.platform || post.platform
+                    const { icon: Icon, color, label } = getPlatformMeta(platform)
+                    const dateLabel = (() => {
+                      const d = post.status === "published" ? post.published_at : post.scheduled_for
+                      if (!d) return "—"
+                      const date = new Date(d)
+                      return `${date.toLocaleDateString("pt-BR", { dateStyle: "medium" })} às ${date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`
+                    })()
+                    return (
+                      <div key={post.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Icon className={`w-5 h-5 ${color}`} />
+                            <span className="font-medium">{label}</span>
+                            <Badge variant="outline">{dateLabel}</Badge>
+                            {getStatusBadge(post.status)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            {post.status === "scheduled" && (
+                              <>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm">
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {post.status === "scheduled" && (
-                            <>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                        <p className="text-sm text-gray-600">{post.content}</p>
+                        {post.image_url && (
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <div className="w-3 h-3 bg-gray-300 rounded"></div>
+                            {post.status === "scheduled" ? "Imagem será gerada automaticamente" : "Imagem incluída"}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-600">{post.content}</p>
-                      {post.image && (
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <div className="w-3 h-3 bg-gray-300 rounded"></div>
-                          {post.status === "scheduled" ? "Imagem será gerada automaticamente" : "Imagem incluída"}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
