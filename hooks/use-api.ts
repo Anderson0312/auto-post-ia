@@ -78,3 +78,7 @@ export function useAnalytics(period = "30days") {
 export function useUsage() {
   return useAPI(() => apiClient.getUsage())
 }
+
+export function useUserPlan() {
+  return useAPI(() => apiClient.getUserPlan())
+}

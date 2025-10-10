@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
+import { toast } from "sonner"
 
 export default function AIConfigPage() {
   const [themes, setThemes] = useState<string[]>(["Produtividade e organização", "Marketing digital", "Empreendedorismo"])
@@ -39,6 +40,7 @@ export default function AIConfigPage() {
   const [postFormat, setPostFormat] = useState("medium")
 
   const [loading, setLoading] = useState(false)
+  const [generatingInstructions, setGeneratingInstructions] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
@@ -91,6 +93,40 @@ export default function AIConfigPage() {
   const removePostTime = (index: number) => {
     if (postTimes.length > 1) {
       setPostTimes(postTimes.filter((_, i) => i !== index))
+    }
+  }
+
+  const generateCustomInstructions = async () => {
+    try {
+      setGeneratingInstructions(true)
+      toast.info("Gerando instruções personalizadas...")
+      
+      // Construindo o prompt com base nas configurações atuais
+      const prompt = `Crie instruções personalizadas detalhadas para uma IA que gera posts para redes sociais com as seguintes características:
+      - Temas: ${themes.join(", ")}
+      - Estilo de conteúdo: ${contentStyle}
+      - Objetivo principal: ${postObjective === "engagement" ? "Engajamento" : postObjective === "awareness" ? "Awareness" : "Vendas"}
+      - Formato dos posts: ${postFormat === "short" ? "Curto" : postFormat === "medium" ? "Médio" : "Longo"}
+      - Idioma: ${language === "pt-BR" ? "Português (Brasil)" : language === "en-US" ? "Inglês (EUA)" : "Espanhol"}
+      
+      As instruções devem ser específicas, detalhadas e incluir diretrizes sobre tom de voz, uso de emojis, estrutura dos posts, elementos a incluir ou evitar, e qualquer outra orientação relevante para criar posts eficazes.`
+      
+      const response = await apiClient.generateAIText({
+        prompt: prompt,
+        max_tokens: 500
+      })
+      
+      if (response && response.text) {
+        setCustomInstructions(response.text)
+        toast.success("Instruções personalizadas geradas com sucesso!")
+      } else {
+        toast.error("Erro ao gerar instruções personalizadas")
+      }
+    } catch (error) {
+      console.error("Erro ao gerar instruções:", error)
+      toast.error("Erro ao gerar instruções personalizadas")
+    } finally {
+      setGeneratingInstructions(false)
     }
   }
 
@@ -328,14 +364,27 @@ export default function AIConfigPage() {
               <CardDescription>Adicione instruções específicas para a IA seguir</CardDescription>
             </CardHeader>
             <CardContent>
-              <Textarea
-                placeholder="Ex: Sempre incluir uma pergunta no final do post, usar emojis moderadamente, mencionar a marca sutilmente..."
-                className="min-h-[100px]"
-                value={customInstructions}
-                onChange={e => setCustomInstructions(e.target.value)}
-              />
-              <div className="text-sm text-gray-500 mt-2">
-                Seja específico sobre o que você quer que a IA faça ou evite
+              <div className="space-y-4">
+                <Textarea
+                  placeholder="Ex: Sempre incluir uma pergunta no final do post, usar emojis moderadamente, mencionar a marca sutilmente..."
+                  className="min-h-[100px]"
+                  value={customInstructions}
+                  onChange={e => setCustomInstructions(e.target.value)}
+                />
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-500">
+                    Seja específico sobre o que você quer que a IA faça ou evite
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => generateCustomInstructions()}
+                    disabled={loading || generatingInstructions}
+                    className="flex items-center gap-2"
+                  >
+                    <Bot className="w-4 h-4" />
+                    {generatingInstructions ? "Gerando..." : "Gerar com IA"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

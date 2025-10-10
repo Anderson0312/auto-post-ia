@@ -156,6 +156,13 @@ class APIClient {
       body: JSON.stringify(data),
     })
   }
+  
+  async updatePassword(data: { currentPassword: string; newPassword: string }) {
+    return this.request<{ message: string }>("/user/password", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
 
   // AI Configuration methods
   async getAIConfig() {
@@ -236,6 +243,13 @@ class APIClient {
       body: JSON.stringify(data),
     })
   }
+  
+  async generateAIText(data: { prompt: string; max_tokens?: number }) {
+    return this.request<{ text: string }>("/ai/generate-text", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
 
   // Analytics methods
   async getAnalytics(period = "30days") {
@@ -244,6 +258,24 @@ class APIClient {
 
   async getUsage() {
     return this.request<any>("/user/usage")
+  }
+  
+  async getUserPlan() {
+    return this.request<{
+      plan: {
+        type: string;
+        status: string;
+        limits: {
+          posts: number;
+          ai_generations: number;
+        };
+      };
+      usage: {
+        posts_created: number;
+        posts_published: number;
+        ai_generations: number;
+      };
+    }>("/user/plan")
   }
 }
 

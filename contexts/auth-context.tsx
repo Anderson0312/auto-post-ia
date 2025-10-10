@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { apiClient } from "@/lib/api-client"
+import { emailService } from "@/lib/email-service"
 
 interface User {
   id: string

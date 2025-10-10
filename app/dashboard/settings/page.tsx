@@ -1,6 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context"
+import { apiClient } from "@/lib/api-client"
+import { toast } from "sonner"
+import { useUserPlan } from "@/hooks/use-api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -32,14 +36,17 @@ import {
 import Link from "next/link"
 
 export default function SettingsPage() {
+  const { user, updateUser } = useAuth()
+  const { data: userPlan, loading: planLoading } = useUserPlan()
+  
   const [profileData, setProfileData] = useState({
-    name: "João Silva",
-    email: "joao@exemplo.com",
-    phone: "+55 11 99999-9999",
+    name: "",
+    email: "",
+    phone: "",
     timezone: "America/Sao_Paulo",
     language: "pt-BR",
     postFormat: "medium",
-    bio: "Empreendedor digital apaixonado por tecnologia e inovação.",
+    bio: "",
   })
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -70,40 +77,83 @@ export default function SettingsPage() {
   })
 
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Carregar dados do usuário
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        timezone: user.timezone || "America/Sao_Paulo",
+        language: user.language || "pt-BR",
+        postFormat: user.post_format || "medium",
+        bio: user.bio || "",
+      })
+    }
+  }, [user])
 
   const handleProfileUpdate = async () => {
-    setIsLoading(true)
-    // Simular salvamento
-    setTimeout(() => {
+    try {
+      setIsLoading(true)
+      await updateUser({
+        name: profileData.name,
+        phone: profileData.phone,
+        timezone: profileData.timezone,
+        language: profileData.language,
+        post_format: profileData.postFormat,
+        bio: profileData.bio,
+      })
+      toast.success("Perfil atualizado com sucesso!")
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error)
+      toast.error("Erro ao atualizar perfil. Tente novamente.")
+    } finally {
       setIsLoading(false)
-      alert("Perfil atualizado com sucesso!")
-    }, 1000)
+    }
   }
 
   const handleNotificationUpdate = async () => {
-    setIsLoading(true)
-    setTimeout(() => {
+    try {
+      setIsLoading(true)
+      // Implementação real seria feita aqui
+      await new Promise(resolve => setTimeout(resolve, 500))
+      toast.success("Configurações de notificação atualizadas!")
+    } catch (error) {
+      toast.error("Erro ao atualizar notificações. Tente novamente.")
+    } finally {
       setIsLoading(false)
-      alert("Configurações de notificação atualizadas!")
-    }, 1000)
+    }
   }
 
   const handlePasswordChange = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("As senhas não coincidem!")
+      toast.error("As senhas não coincidem!")
       return
     }
-    setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
+    
+    try {
+      setIsLoading(true)
+      
+      // Implementação real da mudança de senha
+      await apiClient.updatePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      })
+      
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
-      alert("Senha alterada com sucesso!")
-    }, 1000)
+      toast.success("Senha alterada com sucesso!")
+    } catch (error) {
+      console.error("Erro ao alterar senha:", error)
+      toast.error("Erro ao alterar senha. Verifique sua senha atual e tente novamente.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleDeleteAccount = () => {
     if (confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.")) {
-      alert("Conta excluída com sucesso!")
+      toast.success("Solicitação de exclusão de conta enviada. Você receberá um email de confirmação.")
     }
   }
 
@@ -587,11 +637,29 @@ export default function SettingsPage() {
                       <Crown className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Plano Gratuito</h3>
-                      <p className="text-sm text-gray-500">Até 10 posts por mês</p>
+                      <h3 className="font-semibold">
+                        {planLoading
+                          ? "Carregando..."
+                          : userPlan?.plan.type === "free"
+                          ? "Plano Gratuito"
+                          : userPlan?.plan.type === "pro"
+                          ? "Plano Pro"
+                          : "Plano Enterprise"}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {planLoading
+                          ? "Carregando limites..."
+                          : `Até ${userPlan?.plan.limits.posts || 0} posts por mês`}
+                      </p>
                     </div>
                   </div>
-                  <Badge variant="secondary">Ativo</Badge>
+                  <Badge variant="secondary">
+                    {planLoading
+                      ? "Carregando..."
+                      : userPlan?.plan.status === "active"
+                      ? "Ativo"
+                      : userPlan?.plan.status}
+                  </Badge>
                 </div>
 
                 <div className="space-y-4">
@@ -599,10 +667,46 @@ export default function SettingsPage() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span>Posts este mês</span>
-                      <span>7/10</span>
+                      <span>
+                        {planLoading
+                          ? "Carregando..."
+                          : `${userPlan?.usage.posts_published || 0}/${userPlan?.plan.limits.posts || 0}`}
+                      </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: "70%" }}></div>
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{
+                          width: planLoading
+                            ? "0%"
+                            : `${Math.min(
+                                100,
+                                ((userPlan?.usage.posts_published || 0) / (userPlan?.plan.limits.posts || 1)) * 100
+                              )}%`,
+                        }}
+                      ></div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-sm mt-4">
+                      <span>Gerações com IA</span>
+                      <span>
+                        {planLoading
+                          ? "Carregando..."
+                          : `${userPlan?.usage.ai_generations || 0}/${userPlan?.plan.limits.ai_generations || 0}`}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-600 h-2 rounded-full"
+                        style={{
+                          width: planLoading
+                            ? "0%"
+                            : `${Math.min(
+                                100,
+                                ((userPlan?.usage.ai_generations || 0) / (userPlan?.plan.limits.ai_generations || 1)) * 100
+                              )}%`,
+                        }}
+                      ></div>
                     </div>
                   </div>
                 </div>

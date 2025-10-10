@@ -37,7 +37,7 @@ function formatDate(dt?: string | null) {
   return d.toLocaleString("pt-BR", { dateStyle: "medium", timeStyle: "short" })
 }
 
-function getPlatformMeta(platform: string) {
+export function getPlatformMeta(platform: string) {
   const key = String(platform || "").toLowerCase()
   switch (key) {
     case "instagram":

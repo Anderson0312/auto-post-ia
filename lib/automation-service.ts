@@ -1,6 +1,7 @@
 import { AIService, type GeneratedPost } from "./ai-service"
 import { SocialMediaService, type SocialMediaPost } from "./social-media-service"
 import { DatabaseService } from "./database"
+import { emailService } from "./email-service"
 
 export interface AutomationJob {
   id: string
@@ -203,6 +204,26 @@ export class AutomationService {
         })
 
         console.log(`Post ${post.id} publicado com sucesso na ${socialAccount.platform}`)
+        
+        // Enviar notificação por e-mail se o usuário tiver essa preferência ativada
+        try {
+          // Buscar usuário e suas preferências de notificação
+          const user = await DatabaseService.getUserById(post.user_id)
+          const notificationSettings = await DatabaseService.getNotificationSettings(post.user_id)
+          
+          if (notificationSettings.emailNotifications && notificationSettings.postSuccess) {
+            await emailService.sendPostPublishedEmail(
+              user.email,
+              user.name,
+              post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
+              socialAccount.platform,
+              result.postUrl
+            )
+          }
+        } catch (error) {
+          console.error(`Erro ao enviar notificação de post publicado: ${error}`)
+          // Não interrompe o fluxo se a notificação falhar
+        }
       } else {
         throw new Error(result.error || 'Erro desconhecido na publicação')
       }
@@ -224,6 +245,27 @@ export class AutomationService {
         await DatabaseService.updatePostStatus(queueItem.post_id, 'failed', {
           error_message: error instanceof Error ? error.message : 'Erro desconhecido',
         })
+        
+        // Enviar notificação por e-mail sobre a falha
+        try {
+          const post = await DatabaseService.getPostById(queueItem.post_id)
+          const socialAccount = await DatabaseService.getSocialAccountById(post.social_account_id)
+          const user = await DatabaseService.getUserById(post.user_id)
+          const notificationSettings = await DatabaseService.getNotificationSettings(post.user_id)
+          
+          if (notificationSettings.emailNotifications && notificationSettings.postFailure) {
+            await emailService.sendPostFailedEmail(
+              user.email,
+              user.name,
+              post.content.substring(0, 50) + (post.content.length > 50 ? '...' : ''),
+              socialAccount.platform,
+              error instanceof Error ? error.message : 'Erro desconhecido'
+            )
+          }
+        } catch (notifError) {
+          console.error(`Erro ao enviar notificação de falha: ${notifError}`)
+          // Não interrompe o fluxo se a notificação falhar
+        }
       }
     }
   }

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 import Link from "next/link"
+import { getPlatformMeta } from "../page"
 
 interface AutomationStatus {
   status: string
@@ -33,6 +34,7 @@ interface AutomationStatus {
 }
 
 interface ScheduledPost {
+  social_accounts: any
   id: string
   content: string
   platform: string
@@ -548,7 +550,17 @@ export default function AutomationPage() {
                   <div key={post.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">{post.platform}</Badge>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          {(() => {
+                            const { icon: Icon, color, label } = getPlatformMeta(post?.social_accounts?.platform || "");
+                            return (
+                              <>
+                                <Icon className={`w-4 h-4 ${color}`} />
+                                {label}
+                              </>
+                            );
+                          })()}
+                        </Badge>
                         {getStatusBadge(post.status)}
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-2">

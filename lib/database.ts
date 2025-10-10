@@ -64,6 +64,70 @@ export class DatabaseService {
     if (error) throw error
     return data
   }
+  
+  static async getNotificationSettings(userId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("user_settings")
+      .select("notification_settings")
+      .eq("user_id", userId)
+      .single()
+
+    if (error) {
+      // Se não existir, criar com valores padrão
+      if (error.code === "PGRST116") {
+        const defaultSettings = {
+          emailNotifications: true,
+          postSuccess: true,
+          postFailure: true,
+          accountActivity: true,
+          systemUpdates: true,
+          marketingEmails: false
+        }
+        
+        await this.updateNotificationSettings(userId, defaultSettings)
+        return { notification_settings: defaultSettings }
+      }
+      throw error
+    }
+    
+    return data.notification_settings
+  }
+  
+  static async updateNotificationSettings(userId: string, settings: any) {
+    // Verificar se já existe um registro para o usuário
+    const { data: existingSettings } = await supabaseAdmin
+      .from("user_settings")
+      .select("id")
+      .eq("user_id", userId)
+      .single()
+    
+    let result
+    
+    if (existingSettings) {
+      // Atualizar configurações existentes
+      const { data, error } = await supabaseAdmin
+        .from("user_settings")
+        .update({ notification_settings: settings })
+        .eq("user_id", userId)
+        .select()
+        .single()
+      
+      if (error) throw error
+      result = data
+    } else {
+      // Criar novas configurações
+      const { data, error } = await supabaseAdmin
+        .from("user_settings")
+        .insert({ user_id: userId, notification_settings: settings })
+        .select()
+        .single()
+      
+      if (error) throw error
+      result = data
+    }
+    
+    return result.notification_settings
+  }
 
   // User settings operations
   static async createUserSettings(userId: string) {
