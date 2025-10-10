@@ -205,6 +205,25 @@ export class AutomationService {
 
         console.log(`Post ${post.id} publicado com sucesso na ${socialAccount.platform}`)
         
+        // Registrar log de sucesso
+        try {
+          await DatabaseService.createPostLog({
+            user_id: post.user_id,
+            post_id: post.id,
+            social_account_id: post.social_account_id,
+            platform: socialAccount.platform,
+            status: 'success',
+            message: 'Post publicado com sucesso',
+            external_post_id: result.platformPostId,
+            context: {
+              hasImage: !!post.image_url,
+              contentLength: post.content?.length || 0,
+            },
+          })
+        } catch (logErr) {
+          console.error('Falha ao registrar log de sucesso:', logErr)
+        }
+
         // Enviar notificação por e-mail se o usuário tiver essa preferência ativada
         try {
           // Buscar usuário e suas preferências de notificação
@@ -239,6 +258,26 @@ export class AutomationService {
         attempts: newAttempts,
         error_message: error instanceof Error ? error.message : 'Erro desconhecido',
       })
+
+      // Registrar log de erro (tentativa de publicação)
+      try {
+        const post = await DatabaseService.getPostById(queueItem.post_id)
+        const socialAccount = await DatabaseService.getSocialAccountById(post.social_account_id)
+        await DatabaseService.createPostLog({
+          user_id: post.user_id,
+          post_id: queueItem.post_id,
+          social_account_id: post.social_account_id,
+          platform: socialAccount.platform,
+          status: 'error',
+          message: error instanceof Error ? error.message : 'Erro desconhecido',
+          context: {
+            attempts: newAttempts,
+            maxAttempts: queueItem.max_attempts,
+          },
+        })
+      } catch (logErr) {
+        console.error('Falha ao registrar log de erro:', logErr)
+      }
 
       // Se falhou definitivamente, marcar post como falhado
       if (status === 'failed') {

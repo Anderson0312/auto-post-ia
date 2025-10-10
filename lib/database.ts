@@ -324,6 +324,65 @@ export class DatabaseService {
     return data
   }
 
+  // Post Logs operations
+  static async createPostLog(logData: {
+    user_id: string
+    post_id?: string
+    social_account_id?: string
+    platform: string
+    status: "success" | "error" | "info"
+    message?: string
+    error_code?: string
+    external_post_id?: string
+    context?: any
+  }) {
+    const { data, error } = await supabaseAdmin
+      .from("post_logs")
+      .insert([logData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async getPostLogs(userId: string, options?: { limit?: number; status?: string; platform?: string; postId?: string }) {
+    const limit = options?.limit ?? 50
+
+    let query = supabaseAdmin
+      .from("post_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(Math.max(1, Math.min(200, limit)))
+
+    if (options?.status) {
+      query = query.eq("status", options.status)
+    }
+    if (options?.platform) {
+      query = query.eq("platform", options.platform)
+    }
+    if (options?.postId) {
+      query = query.eq("post_id", options.postId)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+    return data || []
+  }
+
+  static async getPostLogsByPostId(postId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("post_logs")
+      .select("*")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return data || []
+  }
+
   // Usage tracking
   static async updateUsageTracking(
     userId: string,
@@ -529,5 +588,30 @@ export class DatabaseService {
       .eq("post_id", postId)
 
     if (error) throw error
+  }
+
+  static async getQueueItems(
+    userId: string,
+    options?: { status?: string; limit?: number }
+  ) {
+    const limit = options?.limit ?? 50
+
+    let query = supabaseAdmin
+      .from("post_queue")
+      .select(`
+        *,
+        posts(*, social_accounts(platform, username))
+      `)
+      .eq("user_id", userId)
+      .order("scheduled_for", { ascending: false })
+      .limit(Math.max(1, Math.min(200, limit)))
+
+    if (options?.status) {
+      query = query.eq("status", options.status)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
   }
 }

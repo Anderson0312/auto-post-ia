@@ -156,6 +156,12 @@ export default function ReportsPage() {
                 <SelectItem value="1year">Último ano</SelectItem>
               </SelectContent>
             </Select>
+            <Link href="/dashboard/reports/logs">
+              <Button variant="outline" size="sm" className="p-2">
+                <MessageCircle className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Ver Logs</span>
+              </Button>
+            </Link>
             <Button onClick={() => alert("Relatório será exportado em PDF") } className="p-2">
               <Download className="w-5 h-5 mr-0 sm:mr-2" />
               <span className="hidden sm:inline">Exportar PDF</span>
@@ -172,11 +178,13 @@ export default function ReportsPage() {
         {!postsLoading && postsError && (
           <div className="py-12 text-center text-red-600">Erro ao carregar dados: {postsError}</div>
         )}
-        {!postsLoading && !postsError && publishedPosts.length === 0 && (
-          <div className="py-12 text-center text-gray-500">Nenhum post publicado no período selecionado.</div>
-        )}
-
-        {!postsLoading && !postsError && publishedPosts.length > 0 && (
+        {!postsLoading && !postsError && (
+          <>
+            {publishedPosts.length === 0 && (
+              <div className="py-6 text-center text-gray-500">
+                Nenhum post publicado no período selecionado. Mostrando métricas zeradas.
+              </div>
+            )}
           <div className="space-y-8">
             {/* Overview Stats reais */}
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -349,6 +357,7 @@ export default function ReportsPage() {
               </TabsContent>
             </Tabs>
           </div>
+          </>
         )}
       </div>
     </div>

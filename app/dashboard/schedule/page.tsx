@@ -22,6 +22,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  Send,
 } from "lucide-react"
 import Link from "next/link"
 import { usePosts } from "@/hooks/use-api"
@@ -141,6 +142,7 @@ export default function SchedulePage() {
   const [editTime, setEditTime] = useState<string>("")
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isPostingNow, setIsPostingNow] = useState(false)
 
   const openView = (post: any) => {
     setActivePost(post)
@@ -190,6 +192,31 @@ export default function SchedulePage() {
       toast({ title: "Erro ao excluir", description: err?.message || "Tente novamente mais tarde.", variant: "destructive" })
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handlePostNow = async () => {
+    if (!activePost) return
+    try {
+      setIsPostingNow(true)
+      const response = await fetch(`/api/posts/resend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ postId: activePost.id }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data?.error || "Falha ao enviar post agora")
+      }
+      toast({ title: "Post enviado para processamento", description: "Vamos tentar publicar agora." })
+      setViewOpen(false)
+      setActivePost(null)
+      await refetch?.()
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar agora", description: err?.message || "Tente novamente mais tarde.", variant: "destructive" })
+    } finally {
+      setIsPostingNow(false)
     }
   }
 
@@ -433,6 +460,12 @@ export default function SchedulePage() {
             )}
             <DialogFooter>
               <Button variant="secondary" onClick={() => setViewOpen(false)}>Fechar</Button>
+              {activePost?.status !== "published" && (
+                <Button onClick={handlePostNow} disabled={isPostingNow}>
+                  <Send className="w-4 h-4 mr-2" />
+                  {isPostingNow ? "Enviando…" : "Enviar agora"}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

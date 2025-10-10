@@ -80,8 +80,15 @@ export class SocialMediaService {
   static async postToLinkedIn(accessToken: string, userId: string, post: SocialMediaPost): Promise<PostResult> {
     try {
       const linkedinApiUrl = "https://api.linkedin.com/v2/ugcPosts"
+      const apiVersion = process.env.LINKEDIN_API_VERSION || "202405"
+      const allowExternalImage = (process.env.LINKEDIN_ALLOW_EXTERNAL_IMAGE_URL || "false").toLowerCase() === "true"
 
-      const postData = {
+      // Nota: para incluir imagem no UGC Post do LinkedIn é necessário
+      // fazer upload prévio para gerar um asset URN; URLs externas
+      // geralmente não são aceitas e podem causar 500.
+      // Por padrão, publicamos como texto puro (sem media). Se desejar
+      // tentar com URL externa, habilite via env LINKEDIN_ALLOW_EXTERNAL_IMAGE_URL=true.
+      const postData: any = {
         author: `urn:li:person:${userId}`,
         lifecycleState: "PUBLISHED",
         specificContent: {
@@ -89,26 +96,24 @@ export class SocialMediaService {
             shareCommentary: {
               text: post.content,
             },
-            shareMediaCategory: post.imageUrl ? "IMAGE" : "NONE",
-            ...(post.imageUrl && {
-              media: [
-                {
-                  status: "READY",
-                  description: {
-                    text: "Image description",
-                  },
-                  media: post.imageUrl,
-                  title: {
-                    text: "Post Image",
-                  },
-                },
-              ],
-            }),
+            shareMediaCategory: "NONE",
           },
         },
         visibility: {
           "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
         },
+      }
+
+      if (allowExternalImage && post.imageUrl) {
+        postData.specificContent["com.linkedin.ugc.ShareContent"].shareMediaCategory = "IMAGE"
+        postData.specificContent["com.linkedin.ugc.ShareContent"].media = [
+          {
+            status: "READY",
+            description: { text: "Image" },
+            media: post.imageUrl,
+            title: { text: "Image" },
+          },
+        ]
       }
 
       const response = await fetch(linkedinApiUrl, {
@@ -117,13 +122,28 @@ export class SocialMediaService {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
           "X-Restli-Protocol-Version": "2.0.0",
+          // LinkedIn requires explicit version for many endpoints, including UGC
+          "LinkedIn-Version": apiVersion,
         },
         body: JSON.stringify(postData),
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to post to LinkedIn")
+        // Try to parse structured error; fall back to text
+        let detail = "Failed to post to LinkedIn"
+        try {
+          const error = await response.json()
+          detail = error.message || error.serviceErrorCode || JSON.stringify(error)
+        } catch {
+          try {
+            detail = await response.text()
+          } catch {}
+        }
+        // Common permissions hint
+        if (detail.includes("Not enough permissions") || response.status === 403) {
+          detail += " — verifique se o escopo 'w_member_social' foi concedido e se o header 'LinkedIn-Version' está presente."
+        }
+        throw new Error(`HTTP ${response.status} ${response.statusText}: ${detail}`)
       }
 
       const responseData = await response.json()
@@ -206,8 +226,19 @@ export class SocialMediaService {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || "Failed to post to Twitter")
+        let detail = "Failed to post to Twitter"
+        try {
+          const error = await response.json()
+          detail = error.detail || JSON.stringify(error)
+        } catch {
+          try {
+            detail = await response.text()
+          } catch {}
+        }
+        if (response.status === 401 || response.status === 403) {
+          detail += " — verifique se o fluxo OAuth 2.0 tem os escopos 'tweet.write users.read offline.access' e se o token é de usuário."
+        }
+        throw new Error(`HTTP ${response.status} ${response.statusText}: ${detail}`)
       }
 
       const responseData = await response.json()

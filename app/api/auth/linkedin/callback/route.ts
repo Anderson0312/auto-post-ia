@@ -1,7 +1,8 @@
 import { DatabaseService } from "@/lib/database"
 import { getUserIdFromRequest } from "@/lib/session"
+import { type NextRequest, NextResponse } from "next/server"
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
     const code = url.searchParams.get("code")
@@ -9,8 +10,15 @@ export async function GET(req: Request) {
     const state = url.searchParams.get("state") || ""
 
     const makeRedirect = (pathWithQuery: string) => {
-      const target = new URL(pathWithQuery, url.origin)
-      return Response.redirect(target.toString())
+      const origin = (() => {
+        try {
+          return new URL(req.url).origin
+        } catch {
+          return "http://localhost:3000"
+        }
+      })()
+      const target = new URL(pathWithQuery, origin)
+      return NextResponse.redirect(target.toString())
     }
 
     // Handle OAuth errors returned by LinkedIn
@@ -26,7 +34,7 @@ export async function GET(req: Request) {
     }
 
     // Identificar usuário pela sessão (cookie HttpOnly)
-    const userId = await getUserIdFromRequest(request as any)
+    const userId = await getUserIdFromRequest(req as any)
 
     if (!userId) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=unauthorized")

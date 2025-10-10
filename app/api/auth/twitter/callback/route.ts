@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=incomplete_state")
     }
 
-    // Identificar usuário pela sessão via cookie
-    const userId = await getUserIdFromRequest(request as any)
+    // Identificar usuário pela sessão via cookie 
+    const userId = await getUserIdFromRequest(req as any) 
     if (!userId) {
       return makeRedirect("/dashboard/social-accounts?status=error&reason=unauthorized")
     }

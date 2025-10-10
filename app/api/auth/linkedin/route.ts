@@ -10,8 +10,8 @@ export async function GET(req: Request) {
     })
   }
 
-  // Allow configuring scopes via env. Default to minimal scope to avoid unauthorized errors.
-  const rawScopes = process.env.LINKEDIN_SCOPES?.trim() || "r_liteprofile"
+  // Allow configuring scopes via env. Default includes write permission for UGC posts.
+  const rawScopes = process.env.LINKEDIN_SCOPES?.trim() || "r_liteprofile w_member_social"
   const scope = encodeURIComponent(rawScopes.replace(/\s+/g, " "))
   // Usamos estado apenas como proteção CSRF; não carrega token do usuário.
   const state = "session"
