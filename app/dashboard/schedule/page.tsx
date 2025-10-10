@@ -130,16 +130,16 @@ export default function SchedulePage() {
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
+              <Button variant="ghost" size="sm" className="p-2">
+                <ArrowLeft className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Voltar</span>
               </Button>
             </Link>
             <div className="flex items-center gap-2">
               <CalendarIcon className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Calendário de Posts</h1>
+              <h1 className="sm:inline text-xl font-bold text-gray-900">Calendário de Posts</h1>
             </div>
           </div>
         </div>

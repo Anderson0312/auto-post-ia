@@ -129,22 +129,25 @@ export default function ReportsPage() {
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
+              <Button variant="ghost" size="sm" className="p-2">
+                <ArrowLeft className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Voltar</span>
               </Button>
             </Link>
             <div className="flex items-center gap-2">
               <BarChart3 className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Relatórios e Análises</h1>
+              <h1 className="sm:inline text-xl font-bold text-gray-900">Relatórios e Análises</h1>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
+              <SelectTrigger className="w-10 sm:w-40 justify-center">
+                <Calendar className="w-4 h-4 sm:hidden" />
+                <span className="hidden sm:inline">
+                  <SelectValue />
+                </span>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="7days">Últimos 7 dias</SelectItem>
@@ -153,9 +156,9 @@ export default function ReportsPage() {
                 <SelectItem value="1year">Último ano</SelectItem>
               </SelectContent>
             </Select>
-            <Button onClick={() => alert("Relatório será exportado em PDF") }>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar PDF
+            <Button onClick={() => alert("Relatório será exportado em PDF") } className="p-2">
+              <Download className="w-5 h-5 mr-0 sm:mr-2" />
+              <span className="hidden sm:inline">Exportar PDF</span>
             </Button>
           </div>
         </div>

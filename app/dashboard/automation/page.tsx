@@ -58,7 +58,7 @@ export default function AutomationPage() {
   const loadAutomationData = async () => {
     try {
       setLoading(true)
-      
+
       // Carregar status da automação
       const statusResponse = await fetch('/api/automation/run')
       const statusData = await statusResponse.json()
@@ -79,7 +79,7 @@ export default function AutomationPage() {
   const runAutomation = async () => {
     try {
       setRunningAutomation(true)
-      
+
       const response = await fetch('/api/automation/run', {
         method: 'POST',
         headers: {
@@ -291,19 +291,19 @@ export default function AutomationPage() {
           <div className="container mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Voltar ao Dashboard
+                <Button variant="ghost" size="sm" className="p-2">
+                  <ArrowLeft className="w-5 h-5 mr-0 sm:mr-2" />
+                  <span className="hidden sm:inline">Voltar ao Dashboard</span>
                 </Button>
               </Link>
               <div className="flex items-center gap-2">
                 <Zap className="w-6 h-6 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900">Automação de Posts</h1>
+                <h1 className=" sm:inline text-xl font-bold text-gray-900">Automação de Posts</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-8 w-7" />
+              <Skeleton className="h-8 w-7" />
             </div>
           </div>
         </header>
@@ -312,13 +312,13 @@ export default function AutomationPage() {
           <div className="space-y-6">
             {/* Description Skeleton */}
             <Skeleton className="h-4 w-96" />
-            
+
             {/* Stats Skeleton */}
             <StatsSkeleton />
-            
+
             {/* Config Skeleton */}
             <ConfigSkeleton />
-            
+
             {/* Posts Skeleton */}
             <PostsSkeleton />
           </div>
@@ -332,33 +332,33 @@ export default function AutomationPage() {
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar ao Dashboard
+              <Button variant="ghost" size="sm" className="p-2">
+                <ArrowLeft className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Voltar ao Dashboard</span>
               </Button>
             </Link>
             <div className="flex items-center gap-2">
               <Zap className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Automação de Posts</h1>
+              <h1 className=" sm:inline text-xl font-bold text-gray-900">Automação de Posts</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={loadAutomationData}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Atualizar
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="outline" onClick={loadAutomationData} className="p-2">
+              <RefreshCw className="w-5 h-5 mr-0 sm:mr-2" />
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
-            <Button onClick={runAutomation} disabled={runningAutomation}>
+            <Button onClick={runAutomation} disabled={runningAutomation} className="p-2">
               {runningAutomation ? (
                 <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Executando...
+                  <RefreshCw className="w-5 h-5 mr-0 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Executando...</span>
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Executar Agora
+                  <Play className="w-5 h-5 mr-0 sm:mr-2" />
+                  <span className="hidden sm:inline">Executar Agora</span>
                 </>
               )}
             </Button>
@@ -375,221 +375,221 @@ export default function AutomationPage() {
             </p>
           </div>
 
-        {/* Status da Automação */}
-        {automationStatus?.status === 'not_configured' ? (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Pause className="h-5 w-5 text-yellow-500" />
-                Automação Não Configurada
-              </CardTitle>
-              <CardDescription>
-                Configure a automação para começar a criar posts automaticamente
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Para usar a automação, você precisa:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-sm">
-                  <li>Configurar temas e preferências de IA</li>
-                  <li>Conectar pelo menos uma conta social</li>
-                  <li>Definir horários de publicação</li>
-                </ul>
-                <div className="flex gap-2">
-                  <Link href="/dashboard/ai-config">
-                    <Button>Configurar IA</Button>
-                  </Link>
-                  <Link href="/dashboard/social-accounts">
-                    <Button variant="outline">Conectar Contas</Button>
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {/* Estatísticas */}
-            <div className="grid gap-6 md:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Posts Hoje</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {automationStatus?.stats?.postsToday || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    de {automationStatus?.stats?.postsToday || 0} planejados
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Restantes</CardTitle>
-                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {automationStatus?.stats?.remainingPosts || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    posts para hoje
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Agendados</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {automationStatus?.stats?.scheduledPosts || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    posts futuros
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Contas</CardTitle>
-                  <Play className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {automationStatus?.stats?.connectedAccounts || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    contas conectadas
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Configuração Atual */}
+          {/* Status da Automação */}
+          {automationStatus?.status === 'not_configured' ? (
             <Card>
               <CardHeader>
-                <CardTitle>Configuração Atual</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Pause className="h-5 w-5 text-yellow-500" />
+                  Automação Não Configurada
+                </CardTitle>
                 <CardDescription>
-                  Suas configurações de automação e próxima execução
+                  Configure a automação para começar a criar posts automaticamente
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Temas Configurados</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {automationStatus?.config?.themes.map((theme, index) => (
-                        <Badge key={index} variant="secondary">{theme}</Badge>
-                      ))}
-                    </div>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Para usar a automação, você precisa:
+                  </p>
+                  <ul className="list-disc list-inside space-y-2 text-sm">
+                    <li>Configurar temas e preferências de IA</li>
+                    <li>Conectar pelo menos uma conta social</li>
+                    <li>Definir horários de publicação</li>
+                  </ul>
+                  <div className="flex gap-2">
+                    <Link href="/dashboard/ai-config">
+                      <Button>Configurar IA</Button>
+                    </Link>
+                    <Link href="/dashboard/social-accounts">
+                      <Button variant="outline">Conectar Contas</Button>
+                    </Link>
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Horários de Publicação</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {automationStatus?.config?.postTimes.map((time, index) => (
-                        <Badge key={index} variant="outline">{time}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Estilo de Conteúdo</h4>
-                    <Badge variant="outline">{automationStatus?.config?.contentStyle}</Badge>
-                  </div>
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Objetivo</h4>
-                    <Badge variant="outline">{automationStatus?.config?.postObjective}</Badge>
-                  </div>
-                </div>
-                <Separator className="my-4" />
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {automationStatus?.nextExecution}
-                    </p>
-                  </div>
-                  <Link href="/dashboard/ai-config">
-                    <Button variant="outline" size="sm">
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar Configuração
-                    </Button>
-                  </Link>
                 </div>
               </CardContent>
             </Card>
-          </>
-        )}
+          ) : (
+            <>
+              {/* Estatísticas */}
+              <div className="grid gap-6 md:grid-cols-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Posts Hoje</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {automationStatus?.stats?.postsToday || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      de {automationStatus?.stats?.postsToday || 0} planejados
+                    </p>
+                  </CardContent>
+                </Card>
 
-        {/* Posts Agendados */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Posts Agendados</CardTitle>
-            <CardDescription>
-              Gerencie seus posts agendados para publicação
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {scheduledPosts.length === 0 ? (
-              <div className="text-center py-8">
-                <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-2 text-sm font-medium">Nenhum post agendado</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Execute a automação para gerar posts automaticamente
-                </p>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Restantes</CardTitle>
+                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {automationStatus?.stats?.remainingPosts || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      posts para hoje
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Agendados</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {automationStatus?.stats?.scheduledPosts || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      posts futuros
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Contas</CardTitle>
+                    <Play className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {automationStatus?.stats?.connectedAccounts || 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      contas conectadas
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {scheduledPosts.map((post) => (
-                  <div key={post.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          {(() => {
-                            const { icon: Icon, color, label } = getPlatformMeta(post?.social_accounts?.platform || "");
-                            return (
-                              <>
-                                <Icon className={`w-4 h-4 ${color}`} />
-                                {label}
-                              </>
-                            );
-                          })()}
-                        </Badge>
-                        {getStatusBadge(post.status)}
+
+              {/* Configuração Atual */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Configuração Atual</CardTitle>
+                  <CardDescription>
+                    Suas configurações de automação e próxima execução
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Temas Configurados</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {automationStatus?.config?.themes.map((theme, index) => (
+                          <Badge key={index} variant="secondary">{theme}</Badge>
+                        ))}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {post.content}
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Horários de Publicação</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {automationStatus?.config?.postTimes.map((time, index) => (
+                          <Badge key={index} variant="outline">{time}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Estilo de Conteúdo</h4>
+                      <Badge variant="outline">{automationStatus?.config?.contentStyle}</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Objetivo</h4>
+                      <Badge variant="outline">{automationStatus?.config?.postObjective}</Badge>
+                    </div>
+                  </div>
+                  <Separator className="my-4" />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {automationStatus?.nextExecution}
                       </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>Agendado para: {formatDate(post.scheduledFor)}</span>
-                        {post.hashtags.length > 0 && (
-                          <span>{post.hashtags.length} hashtags</span>
+                    </div>
+                    <Link href="/dashboard/ai-config">
+                      <Button variant="outline" size="sm">
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar Configuração
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {/* Posts Agendados */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Posts Agendados</CardTitle>
+              <CardDescription>
+                Gerencie seus posts agendados para publicação
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {scheduledPosts.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-2 text-sm font-medium">Nenhum post agendado</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Execute a automação para gerar posts automaticamente
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {scheduledPosts.map((post) => (
+                    <div key={post.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="flex items-center gap-1">
+                            {(() => {
+                              const { icon: Icon, color, label } = getPlatformMeta(post?.social_accounts?.platform || "");
+                              return (
+                                <>
+                                  <Icon className={`w-4 h-4 ${color}`} />
+                                  {label}
+                                </>
+                              );
+                            })()}
+                          </Badge>
+                          {getStatusBadge(post.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {post.content}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <span>Agendado para: {formatDate(post.scheduledFor)}</span>
+                          {post.hashtags.length > 0 && (
+                            <span>{post.hashtags.length} hashtags</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {post.status === 'scheduled' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => cancelPost(post.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {post.status === 'scheduled' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => cancelPost(post.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

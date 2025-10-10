@@ -106,19 +106,19 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-8 h-8 text-blue-600" />
-            <span className="text-2xl font-bold text-gray-900">AutoPostIA</span>
+            <span className="hidden sm:inline text-2xl font-bold text-gray-900">AutoPostIA</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard/automation">
-              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0">
-                <Zap className="w-4 h-4 mr-2" />
-                Automação
+              <Button size="sm" className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0">
+                <Zap className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Automação</span>
               </Button>
             </Link>
             <Link href="/dashboard/settings">
-              <Button variant="outline" size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                Configurações
+              <Button variant="outline" size="sm" className="p-2">
+                <Settings className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Configurações</span>
               </Button>
             </Link>
             <UserMenu />

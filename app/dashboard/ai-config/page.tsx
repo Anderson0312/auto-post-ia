@@ -22,6 +22,8 @@ import {
   TrendingUp,
   Users,
   ShoppingCart,
+  Save,
+  RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { apiClient } from "@/lib/api-client"
@@ -159,20 +161,30 @@ export default function AIConfigPage() {
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
+              <Button variant="ghost" size="sm" className="p-2">
+                <ArrowLeft className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Voltar</span>
               </Button>
             </Link>
             <div className="flex items-center gap-2">
               <Bot className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Configuração da IA</h1>
+              <h1 className="sm:inline text-xl font-bold text-gray-900">Configuração da IA</h1>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={loading}>
-            {loading ? "Salvando..." : "Salvar Configurações"}
+          <Button onClick={handleSave} disabled={loading} className="p-2">
+            {loading ? (
+              <>
+                <RefreshCw className="w-5 h-5 mr-0 sm:mr-2 animate-spin" />
+                <span className="hidden sm:inline">Salvando...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5 mr-0 sm:mr-2" />
+                <span className="hidden sm:inline">Salvar Configurações</span>
+              </>
+            )}
           </Button>
         </div>
       </header>
