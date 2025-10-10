@@ -221,7 +221,7 @@ export default function SchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Header */}
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -250,12 +250,12 @@ export default function SchedulePage() {
           <TabsContent value="calendar" className="space-y-6">
             <div className="grid lg:grid-cols-4 gap-6">
               {/* Calendar */}
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2 min-w-0">
                 <CardHeader>
                   <CardTitle>Calendário</CardTitle>
                   <CardDescription>Selecione uma data para ver os posts agendados</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="max-w-full overflow-hidden">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <button onClick={prevMonth} className="h-7 w-7 rounded-md border text-gray-600 hover:bg-gray-100 flex items-center justify-center">
@@ -269,13 +269,13 @@ export default function SchedulePage() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-7 text-center text-xs text-muted-foreground">
+                    <div className="grid grid-cols-7 w-full text-center text-xs text-muted-foreground">
                       {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((w) => (
                         <div key={w} className="py-1 font-normal">{w}</div>
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-1 w-full">
                       {days.map((day) => {
                         const isOutside = !isSameMonth(day, currentMonth)
                         const isSelected = selectedDate ? isSameDay(day, selectedDate) : false
