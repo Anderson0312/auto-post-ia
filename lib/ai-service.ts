@@ -1,5 +1,6 @@
 import { generateText, generateObject } from "ai"
 import { openai } from "@ai-sdk/openai"
+import { z } from "zod"
 
 export interface PostGenerationRequest {
   themes: string[]
@@ -17,6 +18,13 @@ export interface GeneratedPost {
   imagePrompt?: string
   aiPrompt: string
 }
+
+// Schema Zod para validação
+const PostSchema = z.object({
+  content: z.string().describe("O conteúdo do post"),
+  hashtags: z.array(z.string()).describe("Array de hashtags sem o símbolo #"),
+  imagePrompt: z.string().optional().describe("Prompt para gerar imagem relacionada ao conteúdo"),
+})
 
 export class AIService {
   static async generatePost(request: PostGenerationRequest): Promise<GeneratedPost> {
@@ -72,35 +80,52 @@ Retorne um JSON com:
 `
 
     try {
-      const result = await generateObject({
-        model: openai("gpt-4o"),
-        prompt,
-        schema: {
-          type: "object",
-          properties: {
-            content: {
-              type: "string",
-              description: "O conteúdo do post",
-            },
-            hashtags: {
-              type: "array",
-              items: { type: "string" },
-              description: "Array de hashtags sem o símbolo #",
-            },
-            imagePrompt: {
-              type: "string",
-              description: "Prompt para gerar imagem relacionada ao conteúdo",
-            },
-          },
-          required: ["content", "hashtags"],
-        },
-      })
+      // Tentar primeiro com generateObject usando schema Zod
+      try {
+        const result = await generateObject({
+          model: openai("gpt-4o"),
+          prompt,
+          schema: PostSchema,
+        })
 
-      return {
-        content: result.object.content,
-        hashtags: result.object.hashtags,
-        imagePrompt: result.object.imagePrompt,
-        aiPrompt: prompt,
+        return {
+          content: result.object.content,
+          hashtags: result.object.hashtags,
+          imagePrompt: result.object.imagePrompt,
+          aiPrompt: prompt,
+        }
+      } catch (generateObjectError) {
+        console.warn("generateObject failed, falling back to generateText:", generateObjectError)
+        
+        // Fallback para generateText se generateObject falhar
+        const result = await generateText({
+          model: openai("gpt-4o"),
+          prompt: prompt + "\n\nResponda APENAS com um JSON válido no formato:\n{\n  \"content\": \"texto do post\",\n  \"hashtags\": [\"hashtag1\", \"hashtag2\"],\n  \"imagePrompt\": \"descrição da imagem\"\n}",
+        })
+
+        // Tentar fazer parse do JSON
+        try {
+          const jsonMatch = result.text.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0])
+            return {
+              content: parsed.content || "Post gerado automaticamente",
+              hashtags: parsed.hashtags || [],
+              imagePrompt: parsed.imagePrompt,
+              aiPrompt: prompt,
+            }
+          }
+        } catch (parseError) {
+          console.warn("Failed to parse JSON response:", parseError)
+        }
+
+        // Fallback final - resposta simples
+        return {
+          content: result.text.substring(0, 280) || "Post gerado automaticamente sobre " + themes.join(", "),
+          hashtags: themes.slice(0, 3),
+          imagePrompt: `Professional social media image about ${themes[0]}`,
+          aiPrompt: prompt,
+        }
       }
     } catch (error) {
       console.error("Error generating post:", error)

@@ -24,6 +24,8 @@ import {
   Eye,
   MessageCircle,
   Share,
+  Zap,
+  Play,
 } from "lucide-react"
 import Link from "next/link"
 import { UserMenu } from "@/components/user-menu"
@@ -107,6 +109,12 @@ export default function DashboardPage() {
             <span className="text-2xl font-bold text-gray-900">AutoPostIA</span>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/dashboard/automation">
+              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0">
+                <Zap className="w-4 h-4 mr-2" />
+                Automação
+              </Button>
+            </Link>
             <Link href="/dashboard/settings">
               <Button variant="outline" size="sm">
                 <Settings className="w-4 h-4 mr-2" />
@@ -128,7 +136,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -216,6 +224,34 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Card de Status da Automação */}
+          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Automação</p>
+                  <p className="text-lg font-bold text-blue-700">
+                    {loadingAI ? "…" : aiConfig ? "Ativa" : "Configurar"}
+                  </p>
+                </div>
+                <div className="relative">
+                  <Zap className="w-8 h-8 text-blue-600" />
+                  {aiConfig && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4">
+                <Link href="/dashboard/automation">
+                  <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <Play className="w-3 h-3 mr-1" />
+                    {aiConfig ? "Gerenciar" : "Ativar"}
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
@@ -234,30 +270,46 @@ export default function DashboardPage() {
                   <CardDescription>Configure sua automação em poucos cliques</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Link href="/dashboard/ai-config">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Bot className="w-4 h-4 mr-2" />
-                      Configurar IA e Temas
+                  {/* Botão principal de automação */}
+                  <Link href="/dashboard/automation">
+                    <Button className="w-full justify-start bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0">
+                      <Zap className="w-4 h-4 mr-2" />
+                      Automação de Posts
+                      <Play className="w-3 h-3 ml-auto" />
                     </Button>
                   </Link>
-                  <Link href="/dashboard/social-accounts">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Conectar Nova Rede Social
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/schedule">
-                    <Button className="w-full justify-start" variant="outline">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Ver Calendário de Posts
-                    </Button>
-                  </Link>
-                  <Link href="/dashboard/reports">
-                    <Button className="w-full justify-start" variant="outline">
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Relatórios Detalhados
-                    </Button>
-                  </Link>
+                  
+                  <div className="border-t pt-4 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Configurações</p>
+                    <Link href="/dashboard/ai-config">
+                      <Button className="w-full justify-start" variant="outline">
+                        <Bot className="w-4 h-4 mr-2" />
+                        Configurar IA e Temas
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard/social-accounts">
+                      <Button className="w-full justify-start" variant="outline">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Conectar Nova Rede Social
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="border-t pt-4 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Análise</p>
+                    <Link href="/dashboard/schedule">
+                      <Button className="w-full justify-start" variant="outline">
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Ver Calendário de Posts
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard/reports">
+                      <Button className="w-full justify-start" variant="outline">
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Relatórios Detalhados
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
 

@@ -206,9 +206,13 @@ export class DatabaseService {
     social_account_id: string
     content: string
     image_url?: string
+    image_prompt?: string
+    hashtags?: string[]
     scheduled_for: string
     ai_theme_id?: string
     ai_prompt?: string
+    generation_model?: string
+    status?: string
   }) {
     const { data, error } = await supabaseAdmin.from("posts").insert([postData]).select().single()
 
@@ -232,22 +236,6 @@ export class DatabaseService {
     return data
   }
 
-  static async getScheduledPosts(limit = 100) {
-    const { data, error } = await supabaseAdmin
-      .from("posts")
-      .select(`
-        *,
-        social_accounts(*),
-        users(*)
-      `)
-      .eq("status", "scheduled")
-      .lte("scheduled_for", new Date().toISOString())
-      .order("scheduled_for", { ascending: true })
-      .limit(limit)
-
-    if (error) throw error
-    return data
-  }
 
   static async updatePostStatus(postId: string, status: string, updates: any = {}) {
     const { data, error } = await supabaseAdmin
@@ -309,5 +297,162 @@ export class DatabaseService {
         api_calls: 0,
       }
     )
+  }
+
+  // Automation methods
+  static async getPostsForToday(userId: string) {
+    const today = new Date().toISOString().split('T')[0]
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("created_at", today)
+      .lt("created_at", new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+
+    if (error) throw error
+    return data || []
+  }
+
+  static async getScheduledPosts(userId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        social_accounts(platform, username)
+      `)
+      .eq("user_id", userId)
+      .in("status", ["scheduled", "processing"])
+      .order("scheduled_for", { ascending: true })
+
+    if (error) throw error
+    return data || []
+  }
+
+  static async getReadyPosts() {
+    const now = new Date().toISOString()
+    const { data, error } = await supabaseAdmin
+      .from("post_queue")
+      .select(`
+        *,
+        posts(*)
+      `)
+      .eq("status", "pending")
+      .lte("scheduled_for", now)
+      .order("scheduled_for", { ascending: true })
+
+    if (error) throw error
+    return data || []
+  }
+
+  static async getUsersWithActiveAutomation() {
+    const { data, error } = await supabaseAdmin
+      .from("ai_configurations")
+      .select("user_id")
+      .eq("is_active", true)
+
+    if (error) throw error
+    return data || []
+  }
+
+  static async getUsersWithActiveAutomationDetails() {
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select(`
+        id,
+        email,
+        name,
+        ai_configurations!inner(
+          id,
+          themes,
+          posts_per_day,
+          post_times,
+          content_style,
+          generate_images,
+          post_objective,
+          custom_instructions,
+          language,
+          post_format,
+          is_active
+        )
+      `)
+      .eq("ai_configurations.is_active", true)
+
+    if (error) throw error
+    return data || []
+  }
+
+
+  static async getPostById(postId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .select("*")
+      .eq("id", postId)
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async getSocialAccountById(accountId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("social_accounts")
+      .select("*")
+      .eq("id", accountId)
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+
+  static async createQueueItem(queueData: {
+    post_id: string
+    user_id: string
+    scheduled_for: string
+    status: string
+    attempts: number
+    max_attempts: number
+  }) {
+    const { data, error } = await supabaseAdmin
+      .from("post_queue")
+      .insert([queueData])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async updateQueueItem(queueId: string, updateData: any) {
+    const { data, error } = await supabaseAdmin
+      .from("post_queue")
+      .update(updateData)
+      .eq("id", queueId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async updateQueueItemByPostId(postId: string, updateData: any) {
+    const { data, error } = await supabaseAdmin
+      .from("post_queue")
+      .update(updateData)
+      .eq("post_id", postId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async cancelQueueItem(postId: string) {
+    const { error } = await supabaseAdmin
+      .from("post_queue")
+      .update({ status: "cancelled" })
+      .eq("post_id", postId)
+
+    if (error) throw error
   }
 }
