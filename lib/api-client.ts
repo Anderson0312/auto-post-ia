@@ -243,6 +243,24 @@ class APIClient {
       body: JSON.stringify(data),
     })
   }
+
+  // Post detail and manipulation
+  async getPostDetails(id: string) {
+    return this.request<{ post: any }>(`/automation/posts/${id}`)
+  }
+
+  async updatePost(id: string, data: { scheduledFor?: string; content?: string; imageUrl?: string; hashtags?: string[] }) {
+    return this.request<any>(`/automation/posts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deletePost(id: string) {
+    return this.request<any>(`/automation/posts/${id}`, {
+      method: "DELETE",
+    })
+  }
   
   async generateAIText(data: { prompt: string; max_tokens?: number }) {
     return this.request<{ text: string }>("/ai/generate-text", {

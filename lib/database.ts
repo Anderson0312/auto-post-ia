@@ -300,6 +300,17 @@ export class DatabaseService {
     return data
   }
 
+  static async updatePost(postId: string, updates: any) {
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .update(updates)
+      .eq("id", postId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
 
   static async updatePostStatus(postId: string, status: string, updates: any = {}) {
     const { data, error } = await supabaseAdmin

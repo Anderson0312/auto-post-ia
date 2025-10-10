@@ -27,6 +27,12 @@ import Link from "next/link"
 import { usePosts } from "@/hooks/use-api"
 import { ptBR } from "date-fns/locale"
 import { addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, format } from "date-fns"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { apiClient } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
 
 // Helper para mapear plataforma -> ícone/cores/label
 function getPlatformMeta(platform: string) {
@@ -59,7 +65,7 @@ export default function SchedulePage() {
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
   // Buscar posts reais do usuário
-  const { data: postsResp, loading: loadingPosts } = usePosts()
+  const { data: postsResp, loading: loadingPosts, refetch } = usePosts()
 
   const posts = useMemo(() => {
     return Array.isArray(postsResp as any) ? (postsResp as any) : []
@@ -122,6 +128,68 @@ export default function SchedulePage() {
       return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     } catch {
       return "—"
+    }
+  }
+
+  // Estados/handlers para diálogos
+  const { toast } = useToast()
+  const [viewOpen, setViewOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [activePost, setActivePost] = useState<any | null>(null)
+  const [editDate, setEditDate] = useState<string>("")
+  const [editTime, setEditTime] = useState<string>("")
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const openView = (post: any) => {
+    setActivePost(post)
+    setViewOpen(true)
+  }
+
+  const openEdit = (post: any) => {
+    setActivePost(post)
+    const iso = post?.scheduled_for as string | undefined
+    setEditDate(iso ? iso.split("T")[0] : "")
+    setEditTime(iso ? (iso.split("T")[1]?.slice(0, 5) || "") : "")
+    setEditOpen(true)
+  }
+
+  const confirmDelete = (post: any) => {
+    setActivePost(post)
+    setDeleteOpen(true)
+  }
+
+  const handleUpdate = async () => {
+    if (!activePost) return
+    try {
+      setIsUpdating(true)
+      const localISO = new Date(`${editDate}T${editTime}:00`).toISOString()
+      await apiClient.updatePost(activePost.id, { scheduledFor: localISO })
+      toast({ title: "Post reprogramado", description: "O post foi reprogramado com sucesso." })
+      setEditOpen(false)
+      setActivePost(null)
+      await refetch?.()
+    } catch (err: any) {
+      toast({ title: "Erro ao reprogramar", description: err?.message || "Tente novamente mais tarde.", variant: "destructive" })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!activePost) return
+    try {
+      setIsDeleting(true)
+      await apiClient.deletePost(activePost.id)
+      toast({ title: "Post excluído", description: "O post foi removido da agenda." })
+      setDeleteOpen(false)
+      setActivePost(null)
+      await refetch?.()
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err?.message || "Tente novamente mais tarde.", variant: "destructive" })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -233,13 +301,13 @@ export default function SchedulePage() {
                                 {getStatusBadge(post.status)}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => openView(post)}>
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => openEdit(post)}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => confirmDelete(post)}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
@@ -296,15 +364,15 @@ export default function SchedulePage() {
                             {getStatusBadge(post.status)}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => openView(post)}>
                               <Eye className="w-4 h-4" />
                             </Button>
                             {post.status === "scheduled" && (
                               <>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => openEdit(post)}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => confirmDelete(post)}>
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
                               </>
@@ -326,6 +394,84 @@ export default function SchedulePage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Diálogos */}
+        <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Detalhes do Post</DialogTitle>
+              <DialogDescription>Informações do post selecionado</DialogDescription>
+            </DialogHeader>
+            {activePost && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const platform = activePost.social_accounts?.platform || activePost.platform
+                    const { icon: Icon, color, label } = getPlatformMeta(platform)
+                    return (
+                      <>
+                        <Icon className={`w-5 h-5 ${color}`} />
+                        <span className="font-medium">{label}</span>
+                      </>
+                    )
+                  })()}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Clock className="w-4 h-4" />
+                  <span>
+                    {activePost.status === "published" ? `Publicado às ${formatTime(activePost.published_at)}` : `Agendado para ${formatTime(activePost.scheduled_for)}`}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{activePost.content}</div>
+                {activePost.image_url && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <div className="w-3 h-3 bg-gray-300 rounded"></div>
+                    {activePost.status === "scheduled" ? "Imagem será gerada automaticamente" : "Imagem incluída"}
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setViewOpen(false)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reprogramar Post</DialogTitle>
+              <DialogDescription>Defina nova data e hora para o post</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Data</Label>
+                <Input id="edit-date" type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-time">Hora</Label>
+                <Input id="edit-time" type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={isUpdating}>Cancelar</Button>
+              <Button onClick={handleUpdate} disabled={isUpdating}>{isUpdating ? "Salvando…" : "Salvar"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Post</AlertDialogTitle>
+              <AlertDialogDescription>Tem certeza que deseja excluir este post agendado? Esta ação não pode ser desfeita.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>{isDeleting ? "Excluindo…" : "Excluir"}</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
