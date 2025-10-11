@@ -321,7 +321,7 @@ export default function SchedulePage() {
                         return (
                           <div key={post.id} className="border rounded-lg p-4 space-y-3">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
+                              <div className="flex flex-wrap items-center gap-3">
                                 <Icon className={`w-5 h-5 ${color}`} />
                                 <span className="font-medium">{label}</span>
                                 <Badge variant="outline">{time}</Badge>
@@ -384,7 +384,7 @@ export default function SchedulePage() {
                     return (
                       <div key={post.id} className="border rounded-lg p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-3">
                             <Icon className={`w-5 h-5 ${color}`} />
                             <span className="font-medium">{label}</span>
                             <Badge variant="outline">{dateLabel}</Badge>
@@ -431,7 +431,7 @@ export default function SchedulePage() {
             </DialogHeader>
             {activePost && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {(() => {
                     const platform = activePost.social_accounts?.platform || activePost.platform
                     const { icon: Icon, color, label } = getPlatformMeta(platform)
@@ -443,7 +443,7 @@ export default function SchedulePage() {
                     )
                   })()}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                   <Clock className="w-4 h-4" />
                   <span>
                     {activePost.status === "published" ? `Publicado às ${formatTime(activePost.published_at)}` : `Agendado para ${formatTime(activePost.scheduled_for)}`}
@@ -458,7 +458,7 @@ export default function SchedulePage() {
                 )}
               </div>
             )}
-            <DialogFooter>
+            <DialogFooter className="flex-wrap gap-2">
               <Button variant="secondary" onClick={() => setViewOpen(false)}>Fechar</Button>
               {activePost?.status !== "published" && (
                 <Button onClick={handlePostNow} disabled={isPostingNow}>
