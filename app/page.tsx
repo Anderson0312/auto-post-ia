@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Bot, Calendar, BarChart3, Users, Zap, Shield, Globe, Sparkles } from "lucide-react"
+ import { Badge } from "@/components/ui/badge"
+import { Bot, Calendar, BarChart3, Users, Zap, Shield, Globe, Sparkles, Instagram, Facebook, Linkedin, Twitter, MessageCircle } from "lucide-react"
 import Link from "next/link"
 
 export default function LandingPage() {
@@ -132,23 +132,33 @@ export default function LandingPage() {
 
           <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
             <div className="flex items-center gap-2 text-2xl font-semibold">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg"></div>
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <Instagram className="w-5 h-5 text-white" />
+              </div>
               Instagram
             </div>
             <div className="flex items-center gap-2 text-2xl font-semibold">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg"></div>
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Facebook className="w-5 h-5 text-white" />
+              </div>
               Facebook
             </div>
             <div className="flex items-center gap-2 text-2xl font-semibold">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg"></div>
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Linkedin className="w-5 h-5 text-white" />
+              </div>
               LinkedIn
             </div>
             <div className="flex items-center gap-2 text-2xl font-semibold">
-              <div className="w-8 h-8 bg-black rounded-lg"></div>
+              <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
+                <Twitter className="w-5 h-5 text-white" />
+              </div>
               Twitter
             </div>
             <div className="flex items-center gap-2 text-2xl font-semibold">
-              <div className="w-8 h-8 bg-gray-900 rounded-lg"></div>
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-white" />
+              </div>
               Threads
             </div>
           </div>
@@ -174,7 +184,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="px-8 border-white text-white hover:bg-white hover:text-green-600"
+                  className="px-8 border-white  text-black hover:text-green-600"
                 >
                   Começar Grátis
                 </Button>
