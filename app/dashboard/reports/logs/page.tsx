@@ -4,6 +4,10 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, BarChart3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Badge } from "@/components/ui/badge"
+import { CheckCircle2, AlertTriangle, Info } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 
 export default function LogsDePostsPage() {
   const { toast } = useToast()
@@ -16,6 +20,14 @@ export default function LogsDePostsPage() {
   const [resending, setResending] = useState<boolean>(false)
   const [queueItems, setQueueItems] = useState<any[]>([])
   const [queueStatusFilter, setQueueStatusFilter] = useState<string>("")
+  const [queuePage, setQueuePage] = useState<number>(1)
+  const [queueTotal, setQueueTotal] = useState<number>(0)
+  const queueLimit = 10
+
+  // Pagination state
+  const [page, setPage] = useState<number>(1)
+  const [total, setTotal] = useState<number>(0)
+  const limit = 10
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -32,18 +44,22 @@ export default function LogsDePostsPage() {
 
   async function fetchLogs() {
     const params = new URLSearchParams()
-    params.set("limit", "100")
+    params.set("limit", String(limit))
+    params.set("page", String(page))
     if (statusFilter) params.set("status", statusFilter)
     if (platformFilter) params.set("platform", platformFilter)
 
     const res = await fetch(`/api/posts/logs?${params.toString()}`)
     if (!res.ok) return
     const data = await res.json()
-    setLogs(data || [])
+
+    // Expecting { items, total, page, limit }
+    setLogs(data?.items || [])
+    setTotal(data?.total || 0)
 
     // Notificações em tempo real de erros
     if (autoNotify) {
-      for (const log of data || []) {
+      for (const log of data?.items || []) {
         if (log.status === "error" && !lastErrorIdsRef.current.has(log.id)) {
           lastErrorIdsRef.current.add(log.id)
           toast({
@@ -60,17 +76,19 @@ export default function LogsDePostsPage() {
     const interval = setInterval(fetchLogs, 10000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, platformFilter])
+  }, [statusFilter, platformFilter, page])
 
   async function fetchQueue() {
     const params = new URLSearchParams()
-    params.set("limit", "100")
+    params.set("limit", String(queueLimit))
+    params.set("page", String(queuePage))
     if (queueStatusFilter) params.set("status", queueStatusFilter)
 
     const res = await fetch(`/api/posts/queue?${params.toString()}`)
     if (!res.ok) return
     const data = await res.json()
-    setQueueItems(data || [])
+    setQueueItems(data?.items || [])
+    setQueueTotal(data?.total || 0)
   }
 
   useEffect(() => {
@@ -78,7 +96,11 @@ export default function LogsDePostsPage() {
     const interval = setInterval(fetchQueue, 10000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queueStatusFilter])
+  }, [queueStatusFilter, queuePage])
+
+  const totalPages = Math.max(1, Math.ceil(total / limit))
+  const startItem = (page - 1) * limit + 1
+  const endItem = Math.min(total, page * limit)
 
   return (
     <>
@@ -111,7 +133,7 @@ export default function LogsDePostsPage() {
           <select
             className="w-full border rounded px-2 py-2"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setPage(1); setStatusFilter(e.target.value) }}
           >
             <option value="">Todos</option>
             <option value="success">Success</option>
@@ -124,7 +146,7 @@ export default function LogsDePostsPage() {
           <select
             className="w-full border rounded px-2 py-2"
             value={platformFilter}
-            onChange={(e) => setPlatformFilter(e.target.value)}
+            onChange={(e) => { setPage(1); setPlatformFilter(e.target.value) }}
           >
             <option value="">Todas</option>
             <option value="instagram">Instagram</option>
@@ -145,7 +167,7 @@ export default function LogsDePostsPage() {
       </div>
 
       <div className="flex items-center justify-between mb-4">
-        <div />
+        <div className="text-sm text-gray-600">Mostrando {startItem}–{endItem} de {total}</div>
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
@@ -154,55 +176,6 @@ export default function LogsDePostsPage() {
           />
           <span>Notificar erros em tempo real</span>
         </label>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        <button
-          className="border rounded px-3 py-2 hover:bg-gray-50"
-          disabled={resending}
-          onClick={async () => {
-            setResending(true)
-            try {
-              const res = await fetch('/api/posts/resend', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'error', limit: 50 }),
-              })
-              const data = await res.json()
-              toast({ title: 'Reenvio disparado', description: `Erros reenviados: ${data?.count ?? 0}` })
-              await fetchLogs()
-            } catch (e: any) {
-              toast({ title: 'Falha ao reenviar', description: e?.message || 'Erro desconhecido' })
-            } finally {
-              setResending(false)
-            }
-          }}
-        >
-          Reenviar todos com erro
-        </button>
-        <button
-          className="border rounded px-3 py-2 hover:bg-gray-50"
-          disabled={resending}
-          onClick={async () => {
-            setResending(true)
-            try {
-              const res = await fetch('/api/posts/resend', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'failed', limit: 50 }),
-              })
-              const data = await res.json()
-              toast({ title: 'Reenvio disparado', description: `Falhas reenviadas: ${data?.count ?? 0}` })
-              await fetchLogs()
-            } catch (e: any) {
-              toast({ title: 'Falha ao reenviar', description: e?.message || 'Erro desconhecido' })
-            } finally {
-              setResending(false)
-            }
-          }}
-        >
-          Reenviar todos com falha
-        </button>
       </div>
 
       <div className="overflow-auto border rounded">
@@ -222,7 +195,17 @@ export default function LogsDePostsPage() {
               <tr key={log.id} className="border-t">
                 <td className="p-2">{new Date(log.created_at).toLocaleString()}</td>
                 <td className="p-2">{log.platform}</td>
-                <td className="p-2">{log.status}</td>
+                <td className="p-2">
+                  {log.status === "success" && (
+                    <Badge className="gap-1 bg-green-600 text-white border-transparent"><CheckCircle2 className="w-3 h-3"/> success</Badge>
+                  )}
+                  {log.status === "error" && (
+                    <Badge className="gap-1 bg-red-600 text-white border-transparent"><AlertTriangle className="w-3 h-3"/> error</Badge>
+                  )}
+                  {log.status === "info" && (
+                    <Badge variant="secondary" className="gap-1"><Info className="w-3 h-3"/> info</Badge>
+                  )}
+                </td>
                 <td className="p-2">{log.message}</td>
                 <td className="p-2">{log.error_code || "-"}</td>
                 <td className="p-2">{log.external_post_id || "-"}</td>
@@ -237,6 +220,20 @@ export default function LogsDePostsPage() {
         </table>
       </div>
 
+      <div className="flex items-center justify-between mt-3">
+        <Button
+          variant="outline"
+          disabled={page <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >Anterior</Button>
+        <div className="text-sm">Página {page} de {totalPages}</div>
+        <Button
+          variant="outline"
+          disabled={page >= totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        >Próxima</Button>
+      </div>
+
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-3">Fila de Processamento</h2>
 
@@ -244,10 +241,10 @@ export default function LogsDePostsPage() {
           <div>
             <label className="block text-sm mb-1">Status na fila</label>
             <select
-              className="w-full border rounded px-2 py-2"
-              value={queueStatusFilter}
-              onChange={(e) => setQueueStatusFilter(e.target.value)}
-            >
+             className="w-full border rounded px-2 py-2"
+             value={queueStatusFilter}
+             onChange={(e) => { setQueuePage(1); setQueueStatusFilter(e.target.value) }}
+           >
               <option value="">Todos</option>
               <option value="pending">Pending</option>
               <option value="processing">Processing</option>
@@ -278,8 +275,32 @@ export default function LogsDePostsPage() {
                 <tr key={item.id} className="border-t">
                   <td className="p-2">{new Date(item.scheduled_for).toLocaleString()}</td>
                   <td className="p-2">{item.posts?.social_accounts?.platform || '-'}</td>
-                  <td className="p-2">{item.status}</td>
-                  <td className="p-2">{item.attempts}/{item.max_attempts}</td>
+                  <td className="p-2">
+                    {item.status === "completed" && (
+                      <Badge className="gap-1 bg-green-600 text-white border-transparent"><CheckCircle2 className="w-3 h-3"/> completed</Badge>
+                    )}
+                    {item.status === "failed" && (
+                      <Badge className="gap-1 bg-red-600 text-white border-transparent"><AlertTriangle className="w-3 h-3"/> failed</Badge>
+                    )}
+                    {item.status === "processing" && (
+                      <Badge className="gap-1 bg-blue-600 text-white border-transparent animate-pulse">processing</Badge>
+                    )}
+                    {item.status === "pending" && (
+                      <Badge variant="outline">pending</Badge>
+                    )}
+                    {item.status === "cancelled" && (
+                      <Badge variant="destructive">cancelled</Badge>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">{item.attempts}/{item.max_attempts}</span>
+                      <Progress
+                        value={item.max_attempts ? Math.min(100, Math.round((item.attempts / item.max_attempts) * 100)) : 0}
+                        className="h-2"
+                      />
+                    </div>
+                  </td>
                   <td className="p-2">{item.processed_at ? new Date(item.processed_at).toLocaleString() : '-'}</td>
                   <td className="p-2">{item.error_message || '-'}</td>
                 </tr>
@@ -292,8 +313,43 @@ export default function LogsDePostsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Queue pagination controls */}
+        <div className="flex items-center justify-between mt-3">
+          <Button
+            variant="outline"
+            disabled={queuePage <= 1}
+            onClick={() => setQueuePage((p) => Math.max(1, p - 1))}
+          >Anterior</Button>
+          <div className="text-sm">Página {queuePage} de {Math.max(1, Math.ceil(queueTotal / queueLimit))}</div>
+          <Button
+            variant="outline"
+            disabled={queuePage >= Math.max(1, Math.ceil(queueTotal / queueLimit))}
+            onClick={() => setQueuePage((p) => p + 1)}
+          >Próxima</Button>
+        </div>
       </div>
       </main>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-sm text-gray-500">Success</div>
+            <div className="text-2xl font-semibold">{logs.filter(l => l.status === 'success').length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-sm text-gray-500">Error</div>
+            <div className="text-2xl font-semibold">{logs.filter(l => l.status === 'error').length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="text-sm text-gray-500">Info</div>
+            <div className="text-2xl font-semibold">{logs.filter(l => l.status === 'info').length}</div>
+          </CardContent>
+        </Card>
+      </div>
     </>
   )
 }

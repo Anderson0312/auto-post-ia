@@ -372,6 +372,38 @@ export class DatabaseService {
     return data || []
   }
 
+  static async getPostLogsPaginated(
+    userId: string,
+    options?: { limit?: number; page?: number; status?: string; platform?: string; postId?: string }
+  ) {
+    const limit = Math.max(1, Math.min(200, options?.limit ?? 10))
+    const page = Math.max(1, options?.page ?? 1)
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    let query = supabaseAdmin
+      .from("post_logs")
+      .select("*", { count: "exact" })
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(from, to)
+
+    if (options?.status) {
+      query = query.eq("status", options.status)
+    }
+    if (options?.platform) {
+      query = query.eq("platform", options.platform)
+    }
+    if (options?.postId) {
+      query = query.eq("post_id", options.postId)
+    }
+
+    const { data, error, count } = await query as any
+
+    if (error) throw error
+    return { items: data || [], total: count ?? 0 }
+  }
+
   static async getPostLogsByPostId(postId: string) {
     const { data, error } = await supabaseAdmin
       .from("post_logs")
@@ -613,5 +645,38 @@ export class DatabaseService {
     const { data, error } = await query
     if (error) throw error
     return data || []
+  }
+  static async getQueueItemsPaginated(
+    userId: string,
+    options?: { status?: string; page?: number; limit?: number }
+  ) {
+    const page = Math.max(1, options?.page ?? 1)
+    const limit = Math.max(1, Math.min(200, options?.limit ?? 10))
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    let query = supabaseAdmin
+      .from("post_queue")
+      .select(`
+        *,
+        posts(*, social_accounts(platform, username))
+      `, { count: "exact" })
+      .eq("user_id", userId)
+
+    if (options?.status) {
+      query = query.eq("status", options.status)
+    }
+
+    const { data, error, count } = await query
+      .order("scheduled_for", { ascending: false })
+      .range(from, to)
+
+    if (error) throw error
+    return {
+      items: data || [],
+      total: count ?? 0,
+      page,
+      limit,
+    }
   }
 }

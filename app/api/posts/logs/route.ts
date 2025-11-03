@@ -11,13 +11,17 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const limitParam = searchParams.get("limit")
+    const pageParam = searchParams.get("page")
     const status = searchParams.get("status") || undefined
     const platform = searchParams.get("platform") || undefined
     const postId = searchParams.get("postId") || undefined
-    const limit = limitParam ? Math.max(1, Math.min(200, parseInt(limitParam))) : 50
 
-    const logs = await DatabaseService.getPostLogs(userId, { limit, status, platform, postId })
-    return NextResponse.json(logs)
+    const limit = limitParam ? Math.max(1, Math.min(200, parseInt(limitParam))) : 10
+    const page = pageParam ? Math.max(1, parseInt(pageParam)) : 1
+
+    const { items, total } = await DatabaseService.getPostLogsPaginated(userId, { limit, page, status, platform, postId })
+
+    return NextResponse.json({ items, total, page, limit })
   } catch (error: any) {
     console.error("GET /api/posts/logs error:", error?.message || error)
     return NextResponse.json({ error: "internal_error" }, { status: 500 })
