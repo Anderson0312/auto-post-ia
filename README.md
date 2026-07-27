@@ -52,3 +52,83 @@ LINKEDIN_SCOPES=r_liteprofile w_member_social
 - Após sucesso, o usuário é redirecionado de volta à página `dashboard/social-accounts` com `?status=success&platform=linkedin`.
 
 Observação: esteja autenticado via sessão (cookie HttpOnly). Não usamos localStorage nem cabeçalho Authorization/Bearer para identificar o usuário no fluxo de conexão.
+
+> **Roadmap completo (feito + pendente):** veja [`roadmap.md`](roadmap.md)
+
+## Plataforma de Vídeos (Fase 1)
+
+### Migrações
+
+```bash
+pnpm db:migrate
+```
+
+### Workers (requer Redis)
+
+```bash
+pnpm workers:dev
+```
+
+### Variáveis adicionais
+
+```
+REDIS_URL=redis://localhost:6379
+GEMINI_API_KEY=...
+KLING_ACCESS_KEY=...
+KLING_SECRET_KEY=...
+GCS_BUCKET=...
+GCS_PROJECT_ID=...
+GCS_CLIENT_EMAIL=...
+GCS_PRIVATE_KEY=...
+```
+
+Sem Redis configurado, arquivos são salvos em `.storage/` e servidos via `/api/media/...`.
+Sem Redis, jobs do pipeline rodam inline na API.
+
+### Modelo de imagem OpenAI
+
+DALL-E 3 foi descontinuado. Use:
+
+```
+OPENAI_IMAGE_MODEL=gpt-image-1-mini
+```
+
+Opcional: `gpt-image-1` ou `gpt-image-2` para maior qualidade.
+
+### Vídeo com Gemini Veo (alternativa ao Kling)
+
+1. Crie/ative billing em [Google AI Studio](https://aistudio.google.com) → **Billing** (tier pago; pode exigir prepay mínimo de ~US$10).
+2. Gere uma API key em [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+3. Configure no `.env.local`:
+
+```
+GEMINI_API_KEY=sua_chave_aqui
+GEMINI_VIDEO_MODEL=veo-3.1-fast-generate-preview
+VIDEO_PROVIDER=gemini
+```
+
+`veo-3.1-fast-generate-preview` é mais barato; use `veo-3.1-generate-preview` para maior qualidade.
+
+Teste: `pnpm test:gemini`
+
+Enquanto o Kling não tiver pacote de API ativo, `VIDEO_PROVIDER=gemini` faz o pipeline usar só o Gemini.
+
+### Fase 2 — Viral Engine (em andamento)
+
+Fluxo atual **sem vídeo**: avatar → roteiro → storyboard → **cenas (imagens)**.
+
+Recursos disponíveis:
+- **Assistente guiado** — briefing em `/dashboard/projects/new`
+- **Gerador de ideias virais** — hooks, CTAs e score de viralidade
+- **Otimizar hook** — no detalhe do projeto, após gerar roteiro
+
+Geração de vídeo pausada por padrão. Para reativar:
+
+```
+NEXT_PUBLIC_VIDEO_GENERATION_ENABLED=true
+VIDEO_GENERATION_ENABLED=true
+```
+
+Teste: `pnpm test:viral`
+
+**Próximos na Fase 2:** modo tendências, TTS/narração, legendas automáticas, música de fundo.

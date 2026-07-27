@@ -295,6 +295,106 @@ class APIClient {
       };
     }>("/user/plan")
   }
+
+  // Avatars
+  async getAvatars() {
+    return this.request<{ avatars: any[] }>("/avatars")
+  }
+
+  async getAvatar(id: string) {
+    return this.request<{ avatar: any }>(`/avatars/${id}`)
+  }
+
+  async createAvatar(data: Record<string, unknown>) {
+    return this.request<{ avatar: any; message: string }>("/avatars", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async importAvatar(data: Record<string, unknown>) {
+    return this.request<{ avatar: any; message: string }>("/avatars/import", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  // Projects
+  async getProjects() {
+    return this.request<{ projects: any[] }>("/projects")
+  }
+
+  async getProject(id: string) {
+    return this.request<{ project: any }>(`/projects/${id}`)
+  }
+
+  async createProject(data: Record<string, unknown>) {
+    return this.request<{ project: any }>("/projects", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getProjectJobs(id: string) {
+    return this.request<{ jobs: any[] }>(`/projects/${id}/jobs`)
+  }
+
+  async generateProjectScript(id: string) {
+    return this.request<any>(`/projects/${id}/generate-script`, { method: "POST" })
+  }
+
+  async generateProjectStoryboard(id: string) {
+    return this.request<any>(`/projects/${id}/generate-storyboard`, { method: "POST" })
+  }
+
+  async generateProjectVideo(id: string) {
+    return this.request<any>(`/projects/${id}/generate-video`, { method: "POST" })
+  }
+
+  // Viral Engine (Fase 2)
+  async generateViralIdeas(data: Record<string, unknown>) {
+    return this.request<{ ideas: any[] }>("/viral/ideas", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async buildGuidedBrief(data: Record<string, unknown>) {
+    return this.request<{ brief: any }>("/viral/guided-brief", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async optimizeHook(data: Record<string, unknown>) {
+    return this.request<any>("/viral/optimize-hook", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getTrendingTopics(data: Record<string, unknown>) {
+    return this.request<{ trends: any[] }>("/viral/trends", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async generateProjectNarration(id: string) {
+    return this.request<{ audioUrl: string; voice: string }>(`/projects/${id}/generate-narration`, {
+      method: "POST",
+    })
+  }
+
+  async generateProjectSubtitles(id: string) {
+    return this.request<{ srtUrl: string; cueCount: number }>(`/projects/${id}/generate-subtitles`, {
+      method: "POST",
+    })
+  }
+
+  async exportProject(id: string) {
+    return this.request<Record<string, unknown>>(`/projects/${id}/export`)
+  }
 }
 
 export const apiClient = new APIClient()

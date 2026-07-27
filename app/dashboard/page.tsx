@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { UserMenu } from "@/components/user-menu"
+import { DashboardNav } from "@/components/dashboard-nav"
 import { useSocialAccounts, useAIConfig, usePosts } from "@/hooks/use-api"
 
 function formatDate(dt?: string | null) {
@@ -128,11 +129,14 @@ export default function DashboardPage() {
 
       <div className="container mx-auto px-4 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo ao seu Dashboard</h1>
-          <p className="text-gray-600">
-            Gerencie suas redes sociais e acompanhe o desempenho dos seus posts automatizados
-          </p>
+        <div className="mb-8 space-y-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo ao seu Dashboard</h1>
+            <p className="text-gray-600">
+              Crie vídeos virais com IA, gerencie avatares e publique nas redes sociais
+            </p>
+          </div>
+          <DashboardNav />
         </div>
 
         {/* Stats Cards */}

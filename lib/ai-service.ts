@@ -1,6 +1,7 @@
 import { generateText, generateObject } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
+import { StorageService } from "@/lib/storage/gcs-service"
 
 export interface PostGenerationRequest {
   themes: string[]
@@ -133,33 +134,141 @@ Retorne um JSON com:
     }
   }
 
-  static async generateImage(prompt: string): Promise<string> {
+  static async generateImage(
+    prompt: string,
+    options?: { size?: "1024x1024" | "1024x1792" | "1792x1024" | "1024x1536" | "1536x1024"; forVideo?: boolean },
+  ): Promise<string> {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY não configurada")
+    }
+
+    const trimmedPrompt = prompt.length > 3800 ? `${prompt.slice(0, 3800)}...` : prompt
+    const requestedSize = options?.size || (options?.forVideo ? "1024x1536" : "1024x1024")
+    const size =
+      requestedSize === "1024x1792" ? "1024x1536" :
+      requestedSize === "1792x1024" ? "1536x1024" :
+      requestedSize
+
+    const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1-mini"
+
     try {
-      // Using OpenAI DALL-E for image generation
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: `Create a professional social media image: ${prompt}. Style: modern, clean, visually appealing, suitable for social media posts.`,
-          size: "1024x1024",
-          quality: "standard",
+          model,
+          prompt: trimmedPrompt,
+          size,
+          quality: "high",
           n: 1,
         }),
       })
 
       if (!response.ok) {
-        throw new Error("Failed to generate image")
+        const errorBody = await response.text()
+        console.error("OpenAI Images API error:", response.status, errorBody)
+        throw new Error(`OpenAI Images API ${response.status}: ${errorBody.slice(0, 400)}`)
       }
 
       const data = await response.json()
-      return data.data[0].url
+      const item = data?.data?.[0]
+
+      if (item?.url) {
+        return item.url
+      }
+
+      if (item?.b64_json) {
+        const buffer = Buffer.from(item.b64_json, "base64")
+        const uploaded = await StorageService.uploadBuffer(
+          buffer,
+          StorageService.buildPath("generated/openai", "image.png"),
+          "image/png",
+        )
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+        return uploaded.publicUrl.startsWith("http")
+          ? uploaded.publicUrl
+          : `${baseUrl}${uploaded.publicUrl}`
+      }
+
+      throw new Error("OpenAI não retornou URL nem base64 da imagem")
     } catch (error) {
       console.error("Error generating image:", error)
+      if (error instanceof Error) throw error
       throw new Error("Falha ao gerar imagem com IA")
+    }
+  }
+
+  static async generateImageEdit(
+    prompt: string,
+    referenceImageUrl: string,
+    options?: { forVideo?: boolean; inputFidelity?: "high" | "low" },
+  ): Promise<string> {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY não configurada")
+    }
+
+    const buffer = await StorageService.resolveMediaBuffer(referenceImageUrl)
+    const trimmedPrompt = prompt.length > 32000 ? `${prompt.slice(0, 32000)}...` : prompt
+    const size = options?.forVideo ? "1024x1536" : "1024x1024"
+    const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1-mini"
+
+    const form = new FormData()
+    form.append("image", new Blob([buffer], { type: "image/png" }), "reference.png")
+    form.append("prompt", trimmedPrompt)
+    form.append("model", model)
+    form.append("size", size)
+    form.append("quality", "high")
+
+    if (
+      options?.inputFidelity &&
+      (model === "gpt-image-1" || model === "gpt-image-1.5" || model.startsWith("gpt-image-1.5-"))
+    ) {
+      form.append("input_fidelity", options.inputFidelity)
+    }
+
+    try {
+      const response = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+      })
+
+      if (!response.ok) {
+        const errorBody = await response.text()
+        console.error("OpenAI Images Edit API error:", response.status, errorBody)
+        throw new Error(`OpenAI Images Edit API ${response.status}: ${errorBody.slice(0, 400)}`)
+      }
+
+      const data = await response.json()
+      const item = data?.data?.[0]
+
+      if (item?.url) {
+        return item.url
+      }
+
+      if (item?.b64_json) {
+        const imageBuffer = Buffer.from(item.b64_json, "base64")
+        const uploaded = await StorageService.uploadBuffer(
+          imageBuffer,
+          StorageService.buildPath("generated/openai", "scene-edit.png"),
+          "image/png",
+        )
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+        return uploaded.publicUrl.startsWith("http")
+          ? uploaded.publicUrl
+          : `${baseUrl}${uploaded.publicUrl}`
+      }
+
+      throw new Error("OpenAI edit não retornou URL nem base64 da imagem")
+    } catch (error) {
+      console.error("Error generating image edit:", error)
+      if (error instanceof Error) throw error
+      throw new Error("Falha ao gerar imagem com referência")
     }
   }
 
