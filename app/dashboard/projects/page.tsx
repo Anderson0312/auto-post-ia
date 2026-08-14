@@ -28,8 +28,8 @@ export default function ProjectsPage() {
       <header className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Projetos de Vídeo</h1>
-            <p className="text-sm text-muted-foreground">Biblioteca de conteúdos virais</p>
+            <h1 className="text-2xl font-bold">Vídeos curtos</h1>
+            <p className="text-sm text-muted-foreground">TikTok, YouTube Shorts e Reels — 9:16</p>
           </div>
           <UserMenu />
         </div>
@@ -42,7 +42,7 @@ export default function ProjectsPage() {
           <Button asChild>
             <Link href="/dashboard/projects/new">
               <Plus className="h-4 w-4 mr-2" />
-              Novo Projeto
+              Novo Short
             </Link>
           </Button>
           <Button variant="ghost" onClick={() => refetch()}>Atualizar</Button>
@@ -54,8 +54,8 @@ export default function ProjectsPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <Clapperboard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Nenhum projeto criado ainda.</p>
-              <Button asChild><Link href="/dashboard/projects/new">Criar primeiro projeto</Link></Button>
+              <p className="text-muted-foreground mb-4">Nenhum short criado ainda. Você é o primeiro cliente — comece do zero.</p>
+              <Button asChild><Link href="/dashboard/projects/new">Criar primeiro short</Link></Button>
             </CardContent>
           </Card>
         ) : (

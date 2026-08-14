@@ -9,7 +9,7 @@ export default function ExclusaoDeDados() {
       <p className="mb-4">
         Esta página descreve como você pode solicitar a exclusão dos seus dados
         associados ao uso do nosso aplicativo, em conformidade com as políticas
-        da Meta (Facebook/Instagram) e legislação aplicável.
+        da Meta, TikTok, Google/YouTube e legislação aplicável (LGPD).
       </p>
 
       <h2 className="text-xl font-semibold mt-6 mb-2">Opções de exclusão</h2>
@@ -33,7 +33,7 @@ export default function ExclusaoDeDados() {
       <p className="mb-3">Envie um e-mail para nossa equipe com o assunto "Exclusão de Dados" contendo:</p>
       <ul className="list-disc pl-6 space-y-2 mb-4">
         <li>Seu nome completo e e-mail usado no cadastro.</li>
-        <li>Quais redes sociais estão conectadas (Facebook, Instagram, LinkedIn, Twitter).</li>
+        <li>Quais redes sociais estão conectadas (TikTok, YouTube, Instagram, Facebook, LinkedIn, Twitter).</li>
         <li>(Opcional) Seu ID da rede social, se desejar agilizar a identificação.</li>
       </ul>
       <p className="mb-4">

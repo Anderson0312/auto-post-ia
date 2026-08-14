@@ -3,6 +3,7 @@ import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 import { buildSceneVisualPrompt } from "@/lib/avatars/scene-prompt"
 import { AIService } from "@/lib/ai-service"
+import { SHORT_ASPECT_RATIO, SHORT_FORM_SCRIPT_RULES } from "@/lib/short-form"
 import type { AvatarIdentityInput, GeneratedAvatarIdentity, GeneratedScript, StoryboardScene } from "@/lib/providers/types"
 import type { ContentObjective } from "@/lib/types/video-platform"
 
@@ -95,7 +96,7 @@ Retorne JSON com masterPrompt (prompt mestre em inglês para consistência visua
     viralContext?: string
   }): Promise<GeneratedScript> {
     const prompt = `
-Você é um roteirista especialista em vídeos virais de formato curto.
+Você é um roteirista especialista em TikTok, YouTube Shorts e Reels (${SHORT_ASPECT_RATIO}).
 
 Briefing: ${params.prompt}
 Objetivo: ${params.objective}
@@ -106,12 +107,7 @@ ${params.avatarName ? `Avatar/personagem: ${params.avatarName}` : ""}
 ${params.avatarMasterPrompt ? `Identidade visual: ${params.avatarMasterPrompt}` : ""}
 ${params.viralContext ? `\nContexto Viral Engine:\n${params.viralContext}` : ""}
 
-Regras:
-1. Hook nos primeiros 3 segundos (extremamente forte)
-2. Ritmo rápido para retenção
-3. CTA claro no final
-4. Divida em 3-5 cenas com duração em segundos
-5. Inclua sugestões de legendas
+${SHORT_FORM_SCRIPT_RULES}
 
 Retorne JSON estruturado.
 `

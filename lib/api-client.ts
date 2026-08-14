@@ -395,6 +395,16 @@ class APIClient {
   async exportProject(id: string) {
     return this.request<Record<string, unknown>>(`/projects/${id}/export`)
   }
+
+  async getVideoProvidersStatus() {
+    return this.request<{
+      canGenerateVideo: boolean
+      message: string
+      primary: string | null
+      kling: { canGenerateVideo: boolean; message: string }
+      gemini: { canGenerateVideo: boolean; message: string }
+    }>("/integrations/video/status")
+  }
 }
 
 export const apiClient = new APIClient()

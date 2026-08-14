@@ -41,6 +41,10 @@ function formatDate(dt?: string | null) {
 export function getPlatformMeta(platform: string) {
   const key = String(platform || "").toLowerCase()
   switch (key) {
+    case "tiktok":
+      return { icon: Users, color: "text-gray-900", bgColor: "bg-gray-50", label: "TikTok" }
+    case "youtube":
+      return { icon: Users, color: "text-red-600", bgColor: "bg-red-50", label: "YouTube Shorts" }
     case "instagram":
       return { icon: Instagram, color: "text-pink-600", bgColor: "bg-pink-50", label: "Instagram" }
     case "linkedin":
@@ -131,12 +135,20 @@ export default function DashboardPage() {
         {/* Welcome Section */}
         <div className="mb-8 space-y-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo ao seu Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Conta piloto — vídeos curtos</h1>
             <p className="text-gray-600">
-              Crie vídeos virais com IA, gerencie avatares e publique nas redes sociais
+              Objetivo: crescer TikTok / Shorts do zero só com o SaaS. Fluxo: avatar → short 9:16 → roteiro → vídeo.
             </p>
           </div>
           <DashboardNav />
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link href="/dashboard/projects/new">Criar short</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/avatars">Avatares</Link>
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

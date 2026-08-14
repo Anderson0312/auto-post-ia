@@ -20,18 +20,20 @@ Plataforma SaaS para criar conteúdo de vídeo curto com IA (TikTok, Reels, Shor
 
 | Fase | Nome | Status |
 |------|------|--------|
-| **Fase 1** | Avatares + pipeline (roteiro → storyboard → cenas) | ✅ Concluída (vídeo pausado) |
-| **Fase 2** | Viral Engine, assistente, TTS, legendas, música | 🟡 Quase concluída (falta música/ZIP) |
+| **Fase 1** | Avatares + pipeline (roteiro → storyboard → cenas → vídeo 9:16) | 🟡 Vídeo reativado; aguarda créditos API |
+| **Fase 2** | Viral Engine, assistente, TTS, legendas | 🟡 Quase concluída (falta música/ZIP) |
 | **Fase 3** | Motion transfer, lip sync, publicação, calendário | ⬜ Planejada |
 | **Fase 4** | Métricas, feedback loop, billing, observabilidade | ⬜ Planejada |
 
-### Fluxo ativo hoje (sem vídeo)
+### Fluxo ativo hoje (vídeo curto)
 
 ```
-Avatar → Projeto → Roteiro → Storyboard → Cenas (imagens)
+Avatar → Short 9:16 → Roteiro → Storyboard → Cenas → Vídeo (Kling ou Gemini Veo)
 ```
 
-Geração de **vídeo animado** está **pausada** até créditos Kling (pacote API) ou billing Gemini Veo.
+**Produto principal:** TikTok / YouTube Shorts / Reels. Primeiro cliente = a própria conta, para validar engajamento do zero só com o SaaS.
+
+Geração de vídeo **reativada**. Sem créditos Kling (pacote API) ou billing Gemini Veo, o job **falha de verdade** (não mascara com imagem estática).
 
 ---
 
@@ -97,7 +99,7 @@ Geração de **vídeo animado** está **pausada** até créditos Kling (pacote A
 
 ---
 
-## Fase 1 — Vídeo (implementado, pausado) ⏸️
+## Fase 1 — Vídeo (reativado, bloqueado por créditos) 🟡
 
 Código pronto; aguardando créditos externos.
 
@@ -105,8 +107,9 @@ Código pronto; aguardando créditos externos.
 - [x] Kling: JWT, base64 para imagens locais, modelo `kling-v2-6`
 - [x] Gemini: Veo 3.1, image inline, download com API key
 - [x] Fallback Kling → Gemini; fallback final = preview estático (imagem da cena)
-- [x] UI: botão "Vídeo (em breve)" quando vídeo desabilitado
-- [x] Flag: `NEXT_PUBLIC_VIDEO_GENERATION_ENABLED=true` + `VIDEO_GENERATION_ENABLED=true`
+- [x] UI: botão "Gerar vídeo 9:16" como passo principal
+- [x] Flag: vídeo ligado por padrão (`VIDEO_GENERATION_ENABLED=false` para desligar)
+- [x] Sem fallback silencioso para imagem: se o vídeo falhar, o projeto fica `failed`
 
 ### Bloqueios conhecidos (vídeo)
 
@@ -246,9 +249,9 @@ pnpm test:viral
 
 ## Ordem sugerida de trabalho
 
-1. **Agora (sem vídeo):** completar Fase 2 — tendências → TTS → legendas
-2. **Quando tiver créditos:** reativar vídeo (`VIDEO_GENERATION_ENABLED`) e validar E2E
-3. **Depois:** Fase 3 publicação + calendário
+1. **Agora (Opção A):** desbloquear créditos Kling API ou billing Gemini Veo e gerar o primeiro short E2E
+2. **Conta piloto:** publicar shorts na conta nova e medir retenção/views
+3. **Depois:** concatenar cenas + narração + legendas + publicação
 4. **Por último:** Fase 4 monetização e métricas
 
 ---
@@ -261,7 +264,7 @@ pnpm test:viral
 - [x] Usuário cria projeto e gera roteiro + storyboard + cenas
 - [x] Avatar mantém aparência nas cenas (referência visual)
 - [x] Jobs assíncronos com Redis + estado em Postgres
-- [ ] Vídeo animado E2E *(adiado)*
+- [ ] Vídeo animado E2E *(reativado; falta crédito API)*
 
 ### Fase 2
 
@@ -308,7 +311,8 @@ scripts/            # SQL + testes
 | 2026 | MVP no Next.js modular, sem NestJS |
 | 2026 | Fase 1 = avatares + pipeline até cenas |
 | 2026 | DALL-E 3 → `gpt-image-1-mini` |
-| 2026 | Vídeo pausado; foco em conteúdo estático + Viral Engine |
+| 2026-08 | Produto principal = shorts 9:16; você é o primeiro cliente (dogfood) |
+| 2026-08 | Vídeo reativado; falha explícita sem créditos (sem fallback de imagem) |
 | 2026 | Créditos Kling app ≠ pacote API (erro 1102) |
 | 2026 | Testes autônomos antes de pedir validação manual ao usuário |
 

@@ -152,6 +152,7 @@ export class DatabaseService {
     refresh_token?: string
     token_expires_at?: string
     followers_count?: number
+    avatar_url?: string
   }) {
     const { data, error } = await supabaseAdmin.from("social_accounts").insert([accountData]).select().single()
 
@@ -192,6 +193,18 @@ export class DatabaseService {
       .from("social_accounts")
       .select("*")
       .eq("user_id", userId)
+      .eq("platform", platform)
+      .eq("platform_user_id", platformUserId)
+      .limit(1)
+
+    if (error) throw error
+    return Array.isArray(data) && data.length > 0 ? data[0] : null
+  }
+
+  static async getSocialAccountByPlatformUser(platform: string, platformUserId: string) {
+    const { data, error } = await supabaseAdmin
+      .from("social_accounts")
+      .select("*")
       .eq("platform", platform)
       .eq("platform_user_id", platformUserId)
       .limit(1)

@@ -28,6 +28,11 @@ export function SceneCard({ scene }: { scene: ProjectScene }) {
           <span>•</span>
           <span>{scene.status}</span>
         </div>
+        {Boolean((scene.metadata as Record<string, unknown> | undefined)?.videoError) && (
+          <p className="text-xs text-red-700">
+            {(scene.metadata as Record<string, unknown>).videoError as string}
+          </p>
+        )}
       </CardContent>
     </Card>
   )

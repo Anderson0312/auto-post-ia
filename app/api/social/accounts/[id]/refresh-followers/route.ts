@@ -18,6 +18,36 @@ async function fetchInstagramFollowers(accessToken: string, platformUserId: stri
   }
 }
 
+async function fetchYouTubeSubscribers(accessToken: string): Promise<number | null> {
+  try {
+    const res = await fetch(
+      "https://www.googleapis.com/youtube/v3/channels?part=statistics&mine=true",
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    )
+    if (!res.ok) return null
+    const json = await res.json()
+    const count = json?.items?.[0]?.statistics?.subscriberCount
+    return count != null ? Number(count) : null
+  } catch {
+    return null
+  }
+}
+
+async function fetchTikTokFollowers(accessToken: string): Promise<number | null> {
+  try {
+    const res = await fetch(
+      "https://open.tiktokapis.com/v2/user/info/?fields=follower_count",
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    )
+    if (!res.ok) return null
+    const json = await res.json()
+    const count = json?.data?.user?.follower_count
+    return typeof count === "number" ? count : null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -66,8 +96,17 @@ export async function POST(
           break
         }
         case "twitter": {
-          // Requer API paga/assinatura e chaves.
           reason = "twitter_not_supported_without_enterprise_api"
+          break
+        }
+        case "youtube": {
+          followers = await fetchYouTubeSubscribers(account.access_token)
+          if (followers == null) reason = "youtube_api_unavailable_or_permissions"
+          break
+        }
+        case "tiktok": {
+          followers = await fetchTikTokFollowers(account.access_token)
+          if (followers == null) reason = "tiktok_api_unavailable_or_permissions"
           break
         }
         default: {

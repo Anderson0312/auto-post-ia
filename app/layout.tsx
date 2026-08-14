@@ -11,7 +11,10 @@ export const metadata: Metadata = {
   title: "AutoPostIA - Automatize suas redes sociais com IA",
   description:
     "Crie e publique conteúdo automaticamente no Instagram, Facebook, LinkedIn e Twitter com Inteligência Artificial.",
-    generator: 'v0.dev'
+  generator: "v0.dev",
+  other: {
+    "tiktok-developers-site-verification": "NQDuqNXYGHwgz6lylzY5khdlaR8yDeUU",
+  },
 }
 
 export default function RootLayout({

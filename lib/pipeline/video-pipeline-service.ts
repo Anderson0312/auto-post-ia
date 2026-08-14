@@ -3,7 +3,7 @@ import { OpenAIProvider } from "@/lib/providers/openai-provider"
 import { getVideoProvider, isRealisticAvatar } from "@/lib/providers/provider-router"
 import { StorageService } from "@/lib/storage/gcs-service"
 import { VideoDatabaseService } from "@/lib/video-database"
-import type { AIProvider } from "@/lib/types/video-platform"
+import { SHORT_ASPECT_RATIO } from "@/lib/short-form"
 
 function toAbsoluteMediaUrl(url: string) {
   if (url.startsWith("http://") || url.startsWith("https://")) return url
@@ -152,6 +152,8 @@ export class VideoPipelineService {
     await VideoDatabaseService.updateProject(userId, projectId, { status: "rendering" })
 
     let firstVideoUrl: string | null = null
+    let successfulVideos = 0
+    const videoErrors: string[] = []
 
     for (const scene of scenes) {
       if (!scene.image_url) continue
@@ -163,12 +165,7 @@ export class VideoPipelineService {
       const videoProvider = getVideoProvider(provider)
 
       if (!videoProvider) {
-        await VideoDatabaseService.updateScene(scene.id, {
-          video_url: scene.image_url,
-          status: "completed",
-          metadata: { ...(scene.metadata || {}), fallback: "image_only" },
-        })
-        if (!firstVideoUrl) firstVideoUrl = scene.image_url
+        videoErrors.push(`Cena ${scene.scene_order + 1}: provider de vídeo indisponível`)
         continue
       }
 
@@ -193,7 +190,7 @@ export class VideoPipelineService {
           prompt: scene.visual_prompt,
           imageUrl: toAbsoluteMediaUrl(scene.image_url),
           durationSeconds: scene.duration_seconds,
-          aspectRatio: "9:16",
+          aspectRatio: SHORT_ASPECT_RATIO,
           avatarMasterPrompt: project.virtual_avatars?.master_prompt,
           realisticHuman: Boolean((scene.metadata as Record<string, unknown>)?.realisticHuman),
         }
@@ -256,6 +253,7 @@ export class VideoPipelineService {
         })
 
         if (!firstVideoUrl) firstVideoUrl = uploaded.publicUrl
+        successfulVideos += 1
 
         await VideoDatabaseService.updateGenerationJob(job.id, {
           status: "completed",
@@ -263,27 +261,37 @@ export class VideoPipelineService {
           completed_at: new Date().toISOString(),
         })
       } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro no vídeo da cena"
+        videoErrors.push(`Cena ${scene.scene_order + 1}: ${message}`)
         await VideoDatabaseService.updateGenerationJob(job.id, {
           status: "failed",
-          error_message: error instanceof Error ? error.message : "Erro no vídeo da cena",
+          error_message: message,
         })
         await VideoDatabaseService.updateScene(scene.id, {
-          status: "completed",
-          video_url: scene.image_url,
+          status: "failed",
           metadata: {
             ...(scene.metadata || {}),
-            fallback: "static_image",
-            videoError: error instanceof Error ? error.message : "error",
+            fallback: "video_failed",
+            videoError: message,
           },
         })
-        if (!firstVideoUrl) firstVideoUrl = scene.image_url
       }
+    }
+
+    if (successfulVideos === 0) {
+      await VideoDatabaseService.updateProject(userId, projectId, {
+        status: "failed",
+        error_message: videoErrors[0] || "Nenhuma cena gerou vídeo. Verifique créditos Kling (pacote API) ou billing Gemini Veo.",
+        thumbnail_url: scenes[0]?.image_url || null,
+      })
+      throw new Error(videoErrors[0] || "Falha na geração de vídeo curto")
     }
 
     await VideoDatabaseService.updateProject(userId, projectId, {
       status: "ready",
       final_video_url: firstVideoUrl,
       thumbnail_url: scenes[0]?.image_url || null,
+      error_message: videoErrors.length ? videoErrors.join(" | ") : null,
     })
 
     return { finalVideoUrl: firstVideoUrl }

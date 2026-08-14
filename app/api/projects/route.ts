@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
       prompt: body.prompt,
       avatar_id: body.avatar_id,
       objective: body.objective || "engagement",
-      target_platform: body.target_platform || "instagram",
-      duration_seconds: body.duration_seconds || 30,
+      target_platform: body.target_platform || "tiktok",
+      duration_seconds: body.duration_seconds || 21,
       creation_mode: body.creation_mode || "free_prompt",
       config: body.config,
     })

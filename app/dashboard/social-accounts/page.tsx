@@ -14,11 +14,12 @@ import {
   Facebook,
   Linkedin,
   Twitter,
+  Youtube,
+  Music,
   ArrowLeft,
   CheckCircle,
   AlertCircle,
   Plus,
-  Settings,
   Trash2,
   ExternalLink,
 } from "lucide-react"
@@ -31,6 +32,8 @@ export default function SocialAccountsPage() {
 
   const accounts = useMemo(() => {
     const base = [
+      { id: "tiktok", platform: "TikTok", slug: "tiktok", icon: Music, color: "text-black", bgColor: "bg-gray-50" },
+      { id: "youtube", platform: "YouTube Shorts", slug: "youtube", icon: Youtube, color: "text-red-600", bgColor: "bg-red-50" },
       { id: 1, platform: "Instagram", slug: "instagram", icon: Instagram, color: "text-pink-600", bgColor: "bg-pink-50" },
       { id: 2, platform: "LinkedIn", slug: "linkedin", icon: Linkedin, color: "text-blue-600", bgColor: "bg-blue-50" },
       { id: 3, platform: "Facebook", slug: "facebook", icon: Facebook, color: "text-blue-700", bgColor: "bg-blue-50" },
@@ -74,6 +77,7 @@ export default function SocialAccountsPage() {
       return {
         id: match?.id ?? p.id,
         platform: p.platform,
+        slug: p.slug,
         username: display,
         connected,
         active,
@@ -128,6 +132,10 @@ export default function SocialAccountsPage() {
         return "Facebook requer token de página e Graph API (Page)."
       case "twitter_not_supported_without_enterprise_api":
         return "Twitter/X requer API paga."
+      case "youtube_api_unavailable_or_permissions":
+        return "YouTube requer YouTube Data API habilitada e canal selecionado."
+      case "tiktok_api_unavailable_or_permissions":
+        return "TikTok requer Login Kit / permissões de perfil."
       case "platform_not_supported":
         return "Plataforma não suportada no momento."
       default:
@@ -178,8 +186,7 @@ export default function SocialAccountsPage() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Conecte suas redes sociais para começar a automatizar suas publicações. Seus dados de login são protegidos
-              com criptografia de ponta.
+              <strong>Prioridade:</strong> conecte TikTok e YouTube Shorts para a conta piloto. Instagram/Reels continua disponível.
             </AlertDescription>
           </Alert>
 
@@ -289,8 +296,7 @@ export default function SocialAccountsPage() {
                       ) : (
                         <Button
                           onClick={() => {
-                            const slug = account.platform.toLowerCase()
-                            // Sessão via cookie HttpOnly: sem token na URL
+                            const slug = (account as { slug?: string }).slug || account.platform.toLowerCase()
                             window.location.href = `/api/auth/${slug}`
                           }}
                         >
@@ -313,6 +319,24 @@ export default function SocialAccountsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h4 className="font-semibold">TikTok</h4>
+                  <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                    <li>Crie um app em developers.tiktok.com (Login Kit + Content Posting)</li>
+                    <li>Redirect: /api/auth/tiktok/callback</li>
+                    <li>Clique em Conectar e autorize a conta</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-semibold">YouTube Shorts</h4>
+                  <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                    <li>Crie OAuth no Google Cloud (YouTube Data API v3)</li>
+                    <li>Redirect: /api/auth/youtube/callback</li>
+                    <li>Clique em Conectar e escolha o canal</li>
+                  </ol>
+                </div>
+
                 <div className="space-y-3">
                   <h4 className="font-semibold">Instagram</h4>
                   <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">

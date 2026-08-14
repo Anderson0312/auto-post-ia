@@ -32,13 +32,12 @@ export default function LandingPage() {
           Powered by AI
         </Badge>
         <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-          Automatize suas <span className="text-blue-600">redes sociais</span>
+          Crie <span className="text-blue-600">vídeos curtos virais</span>
           <br />
           com Inteligência Artificial
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Crie e publique conteúdo automaticamente no Instagram, Facebook, LinkedIn e Twitter. Deixe a IA trabalhar para
-          você enquanto você foca no que realmente importa.
+          TikTok, YouTube Shorts e Reels. Avatar, roteiro, cenas e vídeo 9:16 — o primeiro teste é crescer uma conta do zero só com o SaaS.
         </p>
         <div className="flex gap-4 justify-center">
           <Link href="/register">
@@ -220,8 +219,10 @@ export default function LandingPage() {
               <span className="text-xl font-bold">AutoPostIA</span>
             </div>
             <div className="flex items-center gap-4 text-sm text-gray-400">
-              <span>© 2024 AutoPostIA. Todos os direitos reservados.</span>
-              <Globe className="w-4 h-4" />
+              <Link href="/terms" className="hover:text-white">Termos de Serviço</Link>
+              <Link href="/privacy" className="hover:text-white">Política de Privacidade</Link>
+              <Link href="/exclusao-de-dados" className="hover:text-white">Exclusão de dados</Link>
+              <span>© 2026 AutoPostIA</span>
             </div>
           </div>
         </div>
