@@ -74,7 +74,7 @@ export const emailService = {
 }
 
 // Password reset email
-async function sendPasswordResetEmail(email: string, name: string, resetToken: string): Promise<void> {
+export async function sendPasswordResetEmail(email: string, name: string, resetToken: string): Promise<void> {
   const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`
   
   const content = `
