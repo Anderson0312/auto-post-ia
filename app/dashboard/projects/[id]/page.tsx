@@ -2,17 +2,11 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserMenu } from "@/components/user-menu"
-import { DashboardNav } from "@/components/dashboard-nav"
 import { PipelineStepper } from "@/components/video/pipeline-stepper"
 import { SceneCard } from "@/components/video/scene-card"
 import { VideoPreview } from "@/components/video/video-preview"
 import { JobProgress } from "@/components/video/job-progress"
 import { ProjectPostProduction } from "@/components/video/project-post-production"
-import { VideoProvidersStatus } from "@/components/video/video-providers-status"
 import { useProject, useProjectAutoRefresh } from "@/hooks/use-api"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
@@ -24,7 +18,7 @@ export default function ProjectDetailPage() {
   const project = (data as any)?.project
   const { data: jobsData, refetch: refetchJobs } = useProjectAutoRefresh(id, project?.status, refetch)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [hookOptimization, setHookOptimization] = useState<any>(null)
+  const [more, setMore] = useState(false)
 
   const jobs = (jobsData as any)?.jobs || []
   const script = project?.project_scripts?.[0]
@@ -32,6 +26,14 @@ export default function ProjectDetailPage() {
   const config = (project?.config || {}) as Record<string, unknown>
 
   const runAction = async (action: "script" | "storyboard" | "video") => {
+    if (!project) {
+      toast.error("Espere o projeto carregar")
+      return
+    }
+    if (action === "video" && !(project.project_scenes || []).length) {
+      toast.error("Gere as cenas antes do vídeo")
+      return
+    }
     setActionLoading(action)
     try {
       if (action === "script") await apiClient.generateProjectScript(id)
@@ -58,7 +60,6 @@ export default function ProjectDetailPage() {
       link.download = `projeto-${id.slice(0, 8)}.json`
       link.click()
       URL.revokeObjectURL(url)
-      toast.success("Pacote exportado")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erro ao exportar")
     } finally {
@@ -66,154 +67,90 @@ export default function ProjectDetailPage() {
     }
   }
 
+  if (!loading && !project) return <p className="text-zinc-500">Projeto não encontrado.</p>
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{project?.title || "Short"}</h1>
-            <p className="text-sm text-muted-foreground">{project?.prompt}</p>
-          </div>
-          <UserMenu />
+    <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
+      <div>
+        <div className="mx-auto aspect-[9/16] max-w-[280px] overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+          <VideoPreview url={project?.final_video_url} poster={project?.thumbnail_url} />
         </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        <DashboardNav />
-        <VideoProvidersStatus />
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild><Link href="/dashboard/projects">Voltar</Link></Button>
-          <Button variant="ghost" onClick={() => { refetch(); refetchJobs() }}>Atualizar</Button>
-          <Button onClick={() => runAction("script")} disabled={!!actionLoading}>
-            {actionLoading === "script" ? "Gerando..." : "1. Roteiro"}
-          </Button>
-          <Button onClick={() => runAction("storyboard")} disabled={!!actionLoading}>
-            {actionLoading === "storyboard" ? "Gerando..." : "2. Storyboard"}
-          </Button>
-          <Button onClick={() => runAction("video")} disabled={!!actionLoading}>
-            {actionLoading === "video" ? "Gerando..." : "3. Gerar vídeo 9:16"}
-          </Button>
-          {script?.hook && (
-            <Button
-              variant="outline"
-              disabled={!!actionLoading}
-              onClick={async () => {
-                setActionLoading("hook")
-                try {
-                  const result = await apiClient.optimizeHook({
-                    hook: script.hook,
-                    fullScript: script.full_script,
-                    platform: project?.target_platform,
-                    objective: project?.objective,
-                  })
-                  setHookOptimization(result)
-                  toast.success("Hook otimizado")
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Erro ao otimizar hook")
-                } finally {
-                  setActionLoading(null)
-                }
-              }}
-            >
-              {actionLoading === "hook" ? "Otimizando..." : "Otimizar hook"}
-            </Button>
-          )}
+        <div className="mt-4 space-y-2">
+          <button type="button" className="w-full rounded-full bg-fuchsia-500 py-2 text-sm text-white" disabled={!!actionLoading || !project} onClick={() => runAction("script")}>
+            Gerar roteiro
+          </button>
+          <button type="button" className="w-full rounded-full border border-zinc-700 py-2 text-sm" disabled={!!actionLoading || !project} onClick={() => runAction("storyboard")}>
+            Gerar cenas
+          </button>
+          <button type="button" className="w-full rounded-full border border-zinc-700 py-2 text-sm" disabled={!!actionLoading || !project} onClick={() => runAction("video")}>
+            Gerar vídeo
+          </button>
+          <button type="button" disabled className="w-full rounded-full border border-zinc-800 py-2 text-xs text-zinc-500">
+            Publicar — aguardando aprovação TikTok
+          </button>
         </div>
+      </div>
 
-        {loading ? (
-          <p className="text-muted-foreground">Carregando projeto...</p>
-        ) : project ? (
-          <>
-            {project.error_message && (
-              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-                {project.error_message}
-              </p>
-            )}
-            <PipelineStepper status={project.status} videoEnabled />
-            <JobProgress jobs={jobs} />
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader><CardTitle>Preview do short</CardTitle></CardHeader>
-                <CardContent>
-                  <VideoPreview url={project.final_video_url} poster={project.thumbnail_url} />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader><CardTitle>Roteiro</CardTitle></CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  {script ? (
-                    <>
-                      <div><strong>Hook:</strong> {script.hook}</div>
-                      <div><strong>Corpo:</strong> {script.body}</div>
-                      <div><strong>CTA:</strong> {script.cta}</div>
-                      <pre className="whitespace-pre-wrap bg-muted p-3 rounded-lg text-xs">{script.full_script}</pre>
-                      {hookOptimization && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-xs">
-                          <p><strong>Hook otimizado:</strong> {hookOptimization.improvedHook}</p>
-                          {hookOptimization.captionSuggestions?.length > 0 && (
-                            <p><strong>Legendas:</strong> {hookOptimization.captionSuggestions.join(" · ")}</p>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground">Roteiro ainda não gerado.</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <ProjectPostProduction
-              scriptReady={!!script}
-              narration={config.narration as { url?: string; voice?: string } | undefined}
-              subtitles={config.subtitles as { srtUrl?: string; vttUrl?: string; cueCount?: number } | undefined}
-              actionLoading={actionLoading}
-              onNarration={async () => {
-                setActionLoading("narration")
-                try {
-                  await apiClient.generateProjectNarration(id)
-                  toast.success("Narração gerada")
-                  refetch()
-                  refetchJobs()
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Erro na narração")
-                } finally {
-                  setActionLoading(null)
-                }
-              }}
-              onSubtitles={async () => {
-                setActionLoading("subtitles")
-                try {
-                  await apiClient.generateProjectSubtitles(id)
-                  toast.success("Legendas geradas")
-                  refetch()
-                  refetchJobs()
-                } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Erro nas legendas")
-                } finally {
-                  setActionLoading(null)
-                }
-              }}
-              onExport={handleExport}
-            />
-
-            {scenes.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Cenas ({scenes.length})</h2>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {scenes.map((scene: any) => (
-                    <SceneCard key={scene.id} scene={scene} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-muted-foreground">Projeto não encontrado.</p>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold">{project?.title || "Carregando short..."}</h1>
+        {project?.prompt && <p className="text-sm text-zinc-400">{project.prompt}</p>}
+        {project?.error_message && (
+          <p className="rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-300">{project.error_message}</p>
         )}
-      </main>
+        {project && <PipelineStepper status={project.status} videoEnabled />}
+        {project && ["scripting", "storyboard", "generating_scenes", "rendering"].includes(project.status) && (
+          <p className="text-sm text-fuchsia-300">
+            {project.status === "scripting" && "Escrevendo o roteiro..."}
+            {project.status === "storyboard" && "Montando as cenas..."}
+            {project.status === "generating_scenes" && "Gerando imagens das cenas..."}
+            {project.status === "rendering" && "Renderizando o vídeo 9:16 — isso pode levar alguns minutos."}
+          </p>
+        )}
+        <JobProgress jobs={jobs} />
+        {script && (
+          <div className="rounded-2xl border border-zinc-800 p-4 text-sm">
+            <p><strong>Hook:</strong> {script.hook}</p>
+            <p className="mt-2"><strong>CTA:</strong> {script.cta}</p>
+          </div>
+        )}
+        <button type="button" className="text-sm text-zinc-500" onClick={() => setMore(!more)}>
+          {more ? "Menos opções" : "Mais opções"}
+        </button>
+        {more && (
+          <ProjectPostProduction
+            scriptReady={!!script}
+            narration={config.narration as { url?: string; voice?: string } | undefined}
+            subtitles={config.subtitles as { srtUrl?: string; vttUrl?: string; cueCount?: number } | undefined}
+            actionLoading={actionLoading}
+            onNarration={async () => {
+              setActionLoading("narration")
+              try {
+                await apiClient.generateProjectNarration(id)
+                refetch()
+              } finally {
+                setActionLoading(null)
+              }
+            }}
+            onSubtitles={async () => {
+              setActionLoading("subtitles")
+              try {
+                await apiClient.generateProjectSubtitles(id)
+                refetch()
+              } finally {
+                setActionLoading(null)
+              }
+            }}
+            onExport={handleExport}
+          />
+        )}
+        {scenes.length > 0 && (
+          <div className="grid gap-3 md:grid-cols-2">
+            {scenes.map((scene: any) => (
+              <SceneCard key={scene.id} scene={scene} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

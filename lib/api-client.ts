@@ -2,7 +2,8 @@ class APIClient {
   private baseURL: string
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || ""
+    // No browser, sempre mesma origem — evita Failed to fetch entre localhost e 127.0.0.1.
+    this.baseURL = typeof window !== "undefined" ? "" : process.env.NEXT_PUBLIC_API_URL || ""
   }
 
   // Todas as requisições passam a usar cookies HttpOnly (credentials: 'include').
@@ -394,6 +395,38 @@ class APIClient {
 
   async exportProject(id: string) {
     return this.request<Record<string, unknown>>(`/projects/${id}/export`)
+  }
+
+  async getGrowthObjective() {
+    return this.request<{ objective: string }>("/grow/objective")
+  }
+
+  async setGrowthObjective(objective: string) {
+    return this.request<{ objective: string }>("/grow/objective", {
+      method: "PATCH",
+      body: JSON.stringify({ objective }),
+    })
+  }
+
+  async analyzeChannel(url: string, objective: string) {
+    return this.request<{
+      platform: string
+      channel: string
+      url: string
+      notice: string
+      ideas: any[]
+    }>("/grow/channel", {
+      method: "POST",
+      body: JSON.stringify({ url, objective }),
+    })
+  }
+
+  async getWorldTrends(objective: string) {
+    return this.request<{
+      youtube: any[]
+      formats: any[]
+      note: string
+    }>(`/grow/trending?objective=${encodeURIComponent(objective)}`)
   }
 
   async getVideoProvidersStatus() {

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 import Link from "next/link"
-import { getPlatformMeta } from "../page"
+import { getPlatformMeta } from "@/lib/platform-meta"
 
 interface AutomationStatus {
   status: string

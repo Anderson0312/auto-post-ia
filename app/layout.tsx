@@ -4,16 +4,17 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import { Toaster as SonnerToaster } from "sonner"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AutoPostIA - Automatize suas redes sociais com IA",
+  title: "AutoPostIA — estúdio de crescimento para shorts",
   description:
-    "Crie e publique conteúdo automaticamente no Instagram, Facebook, LinkedIn e Twitter com Inteligência Artificial.",
+    "Cresça no TikTok, YouTube Shorts e Reels. Ideia, canal ou tendência vira um short 9:16 com o seu avatar.",
   generator: "v0.dev",
   other: {
-    "tiktok-developers-site-verification": "NQDuqNXYGHwgz6lylzY5khdlaR8yDeUU",
+    "tiktok-developers-site-verification": "9G9KzGz1YMnd4hE0d0Hbb6mwoGHxP6oz",
   },
 }
 
@@ -28,6 +29,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <Toaster />
+          <SonnerToaster richColors position="top-center" />
         </AuthProvider>
       </body>
     </html>

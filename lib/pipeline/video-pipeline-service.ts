@@ -4,6 +4,7 @@ import { getVideoProvider, isRealisticAvatar } from "@/lib/providers/provider-ro
 import { StorageService } from "@/lib/storage/gcs-service"
 import { VideoDatabaseService } from "@/lib/video-database"
 import { SHORT_ASPECT_RATIO } from "@/lib/short-form"
+import type { AIProvider } from "@/lib/types/video-platform"
 
 function toAbsoluteMediaUrl(url: string) {
   if (url.startsWith("http://") || url.startsWith("https://")) return url
@@ -96,6 +97,10 @@ export class VideoPipelineService {
     const scenes = await VideoDatabaseService.getScenesByProject(projectId)
 
     for (const scene of scenes) {
+      if (scene.image_url && scene.status !== "failed") {
+        continue
+      }
+
       await VideoDatabaseService.updateScene(scene.id, { status: "generating_image" })
 
       const job = await VideoDatabaseService.createGenerationJob({
@@ -148,6 +153,9 @@ export class VideoPipelineService {
   static async generateSceneVideos(projectId: string, userId: string) {
     const project = await VideoDatabaseService.getProjectById(userId, projectId)
     const scenes = await VideoDatabaseService.getScenesByProject(projectId)
+    if (!scenes.length) {
+      throw new Error("Gere as cenas antes do vídeo (botão Gerar cenas).")
+    }
 
     await VideoDatabaseService.updateProject(userId, projectId, { status: "rendering" })
 
@@ -157,11 +165,13 @@ export class VideoPipelineService {
 
     for (const scene of scenes) {
       if (!scene.image_url) continue
+      if (scene.video_url && scene.status === "completed") {
+        if (!firstVideoUrl) firstVideoUrl = scene.video_url
+        successfulVideos += 1
+        continue
+      }
 
-      const provider = (preferGeminiVideoProvider()
-        ? "gemini"
-        : scene.provider ||
-          (isRealisticAvatar(project.virtual_avatars) || project.avatar_id ? "kling" : "gemini")) as AIProvider
+      const provider = (scene.provider === "gemini" ? "kling" : scene.provider || "kling") as AIProvider
       const videoProvider = getVideoProvider(provider)
 
       if (!videoProvider) {
@@ -198,12 +208,16 @@ export class VideoPipelineService {
         let activeProvider = provider
         let started = await videoProvider.generateVideo(videoInput)
 
-        if (started.status === "failed" && provider === "kling") {
-          const gemini = getVideoProvider("gemini")
-          if (gemini) {
-            console.warn("Kling falhou, tentando Gemini:", started.errorMessage)
-            activeProvider = "gemini"
-            started = await gemini.generateVideo(videoInput)
+        if (started.status === "failed") {
+          const otherName = activeProvider === "kling" ? "gemini" : "kling"
+          const billingDead = /prepayment|billing|depleted|quota/i.test(started.errorMessage || "")
+          if (!(otherName === "gemini" && billingDead)) {
+            const other = getVideoProvider(otherName)
+            if (other) {
+              console.warn(`${activeProvider} falhou, tentando ${otherName}:`, started.errorMessage)
+              activeProvider = otherName
+              started = await other.generateVideo(videoInput)
+            }
           }
         }
 

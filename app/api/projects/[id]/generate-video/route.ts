@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getUserIdFromRequest } from "@/lib/session"
 import { enqueueVideoGeneration } from "@/lib/pipeline/enqueue"
 
+export const maxDuration = 800
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

@@ -1,33 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { apiClient } from "@/lib/api-client"
 
 export function useAPI<T>(apiCall: () => Promise<T>, dependencies: any[] = []) {
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const apiRef = useRef(apiCall)
+  apiRef.current = apiCall
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       setError(null)
-      const result = await apiCall()
+      const result = await apiRef.current()
       setData(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    fetchData()
+    fetchData(false)
+    // dependências explícitas do caller
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies)
 
-  const refetch = () => {
-    fetchData()
-  }
+  const refetch = useCallback(() => fetchData(true), [fetchData])
 
   return { data, loading, error, refetch }
 }
@@ -54,7 +56,6 @@ export function useMutation<T, P>(apiCall: (params: P) => Promise<T>) {
   return { mutate, loading, error }
 }
 
-// Specific hooks for common operations
 export function useSocialAccounts() {
   return useAPI(() => apiClient.getSocialAccounts())
 }
@@ -109,17 +110,15 @@ export function useProjectAutoRefresh(
   id: string,
   projectStatus?: string,
   refetchProject?: () => void,
-  intervalMs = 3000,
+  intervalMs = 4000,
 ) {
   const { data, loading, error, refetch } = useProjectJobs(id)
+  const jobs = (data as { jobs?: Array<{ status?: string }> } | null)?.jobs || []
+  const hasActiveJobs = jobs.some((job) => job.status === "pending" || job.status === "processing")
+  const projectBusy = projectStatus ? PROJECT_BUSY_STATUSES.includes(projectStatus) : false
 
   useEffect(() => {
     if (!id) return
-
-    const jobs = (data as { jobs?: Array<{ status?: string }> } | null)?.jobs || []
-    const hasActiveJobs = jobs.some((job) => job.status === "pending" || job.status === "processing")
-    const projectBusy = projectStatus ? PROJECT_BUSY_STATUSES.includes(projectStatus) : false
-
     if (!hasActiveJobs && !projectBusy) return
 
     const timer = setInterval(() => {
@@ -128,7 +127,7 @@ export function useProjectAutoRefresh(
     }, intervalMs)
 
     return () => clearInterval(timer)
-  }, [data, id, intervalMs, projectStatus, refetch, refetchProject])
+  }, [hasActiveJobs, id, intervalMs, projectBusy, refetch, refetchProject])
 
   return { data, loading, error, refetch }
 }

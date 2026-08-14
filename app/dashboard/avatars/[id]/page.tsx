@@ -5,8 +5,6 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { UserMenu } from "@/components/user-menu"
-import { DashboardNav } from "@/components/dashboard-nav"
 import { AvatarGallery } from "@/components/video/avatar-gallery"
 import { useAvatar } from "@/hooks/use-api"
 
@@ -17,21 +15,15 @@ export default function AvatarDetailPage() {
   const avatar = (data as any)?.avatar
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{avatar?.name || "Avatar"}</h1>
-            <Badge variant="outline" className="mt-1">{avatar?.status}</Badge>
-          </div>
-          <UserMenu />
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <DashboardNav />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">{avatar?.name || "Avatar"}</h1>
+        <Badge variant="outline" className="mt-1">{avatar?.status}</Badge>
+      </div>
+      <div className="flex gap-2">
         <Button variant="outline" asChild><Link href="/dashboard/avatars">Voltar</Link></Button>
         <Button variant="ghost" onClick={() => refetch()}>Atualizar</Button>
+      </div>
 
         {loading ? (
           <p className="text-muted-foreground">Carregando...</p>
@@ -79,7 +71,6 @@ export default function AvatarDetailPage() {
         ) : (
           <p className="text-muted-foreground">Avatar não encontrado.</p>
         )}
-      </main>
     </div>
   )
 }

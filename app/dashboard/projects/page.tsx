@@ -1,92 +1,60 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Clapperboard } from "lucide-react"
-import { UserMenu } from "@/components/user-menu"
-import { DashboardNav } from "@/components/dashboard-nav"
 import { useProjects } from "@/hooks/use-api"
 
 const statusLabels: Record<string, string> = {
   draft: "Rascunho",
   scripting: "Roteiro",
   storyboard: "Storyboard",
-  generating_scenes: "Gerando cenas",
-  rendering: "Renderizando",
+  generating_scenes: "Cenas",
+  rendering: "Vídeo",
   ready: "Pronto",
   failed: "Falhou",
 }
 
 export default function ProjectsPage() {
-  const { data, loading, refetch } = useProjects()
+  const { data, loading } = useProjects()
   const projects = (data as any)?.projects || []
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Vídeos curtos</h1>
-            <p className="text-sm text-muted-foreground">TikTok, YouTube Shorts e Reels — 9:16</p>
-          </div>
-          <UserMenu />
+    <div className="space-y-6">
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Vídeos</h1>
+          <p className="text-sm text-zinc-400">Grade 9:16 — seus shorts</p>
         </div>
-      </header>
+        <Link href="/dashboard/projects/new" className="rounded-full bg-fuchsia-500 px-4 py-2 text-sm text-white">
+          Novo short
+        </Link>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        <DashboardNav />
-
-        <div className="flex gap-3">
-          <Button asChild>
-            <Link href="/dashboard/projects/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Short
+      {loading ? (
+        <p className="text-zinc-500">Carregando...</p>
+      ) : projects.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-zinc-800 py-16 text-center">
+          <p className="text-zinc-400">Nenhum short ainda.</p>
+          <div className="mt-4 flex justify-center gap-3 text-sm">
+            <Link href="/dashboard/projects/new" className="text-fuchsia-400">Criar</Link>
+            <Link href="/dashboard/grow/copy-channel" className="text-fuchsia-400">Copiar canal</Link>
+            <Link href="/dashboard/grow/trending" className="text-fuchsia-400">Em alta</Link>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {projects.map((project: any) => (
+            <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
+              <div className="aspect-[9/16] overflow-hidden rounded-xl bg-zinc-900">
+                {(project.thumbnail_url || project.final_video_url) && (
+                  <img src={project.thumbnail_url || project.final_video_url} alt="" className="h-full w-full object-cover" />
+                )}
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs">{project.title}</p>
+              <p className="text-[10px] text-zinc-500">{statusLabels[project.status] || project.status}</p>
             </Link>
-          </Button>
-          <Button variant="ghost" onClick={() => refetch()}>Atualizar</Button>
+          ))}
         </div>
-
-        {loading ? (
-          <p className="text-muted-foreground">Carregando projetos...</p>
-        ) : projects.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Clapperboard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Nenhum short criado ainda. Você é o primeiro cliente — comece do zero.</p>
-              <Button asChild><Link href="/dashboard/projects/new">Criar primeiro short</Link></Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project: any) => (
-              <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start gap-2">
-                      <CardTitle className="text-lg line-clamp-1">{project.title}</CardTitle>
-                      <Badge variant="outline">{statusLabels[project.status] || project.status}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {(project.thumbnail_url || project.final_video_url) ? (
-                      <img
-                        src={project.thumbnail_url || project.final_video_url}
-                        alt={project.title}
-                        className="w-full aspect-[9/16] object-cover rounded-lg mb-3"
-                      />
-                    ) : (
-                      <div className="w-full aspect-[9/16] bg-muted rounded-lg mb-3" />
-                    )}
-                    <p className="text-sm text-muted-foreground line-clamp-2">{project.prompt}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
+      )}
     </div>
   )
 }

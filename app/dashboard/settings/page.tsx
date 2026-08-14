@@ -178,6 +178,13 @@ export default function SettingsPage() {
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <p className="mb-4 text-sm text-muted-foreground">
+          Automação de posts texto/imagem ficou em{" "}
+          <Link href="/dashboard/automation" className="underline">
+            Config avançado / Automação
+          </Link>
+          .
+        </p>
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="profile" className="flex items-center gap-2">

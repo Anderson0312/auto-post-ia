@@ -236,4 +236,18 @@ Idioma: pt-BR.
       throw new Error("Falha ao otimizar hook")
     }
   }
+
+  static async generateChannelStyleIdeas(params: {
+    channelLabel: string
+    context: string
+    objective: ContentObjective
+    count?: number
+  }): Promise<ViralIdea[]> {
+    return this.generateIdeas({
+      niche: `Estilo do canal ${params.channelLabel}. NÃO copie o vídeo original. Copie só formato, hook e estrutura. Contexto: ${params.context}`,
+      platform: "tiktok",
+      objective: params.objective,
+      count: params.count || 10,
+    })
+  }
 }

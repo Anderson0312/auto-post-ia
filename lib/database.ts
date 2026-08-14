@@ -220,7 +220,7 @@ export class DatabaseService {
       .select("*")
       .eq("user_id", userId)
       .eq("is_active", true)
-      .single()
+      .maybeSingle()
 
     if (error) throw error
     return data
@@ -239,6 +239,36 @@ export class DatabaseService {
 
     if (error) throw error
     return data
+  }
+
+  static async patchAIConfiguration(userId: string, updates: Record<string, unknown>) {
+    const { data: existing } = await supabaseAdmin
+      .from("ai_configurations")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle()
+
+    if (existing?.id) {
+      const { data, error } = await supabaseAdmin
+        .from("ai_configurations")
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    }
+
+    return this.updateAIConfiguration(userId, {
+      posts_per_day: 2,
+      post_times: ["09:00", "15:00"],
+      post_objective: "engagement",
+      content_style: "casual",
+      generate_images: true,
+      is_active: true,
+      ...updates,
+    })
   }
 
   // AI themes operations

@@ -7,10 +7,11 @@ import { Bot, Clapperboard, Home, Share2, Settings, UserCircle2 } from "lucide-r
 
 const links = [
   { href: "/dashboard", label: "Início", icon: Home },
+  { href: "/dashboard/projects/new", label: "Criar", icon: Clapperboard },
+  { href: "/dashboard/grow/trending", label: "Em alta", icon: Bot },
   { href: "/dashboard/avatars", label: "Avatares", icon: UserCircle2 },
   { href: "/dashboard/projects", label: "Vídeos", icon: Clapperboard },
   { href: "/dashboard/social-accounts", label: "Redes", icon: Share2 },
-  { href: "/dashboard/automation", label: "Automação", icon: Bot },
   { href: "/dashboard/settings", label: "Config", icon: Settings },
 ]
 

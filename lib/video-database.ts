@@ -113,8 +113,9 @@ export class VideoDatabaseService {
       `)
       .eq("id", projectId)
       .eq("user_id", userId)
-      .single()
+      .maybeSingle()
     if (error) throw error
+    if (!data) throw new Error("Projeto não encontrado")
     if (data?.project_scenes) {
       data.project_scenes.sort((a: { scene_order: number }, b: { scene_order: number }) => a.scene_order - b.scene_order)
     }

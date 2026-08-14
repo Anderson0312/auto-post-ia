@@ -379,6 +379,28 @@ export class AutomationService {
       const aiConfig = await DatabaseService.getAIConfiguration(userId)
       const socialAccounts = await DatabaseService.getSocialAccounts(userId)
 
+      if (!aiConfig) {
+        return {
+          userId,
+          themes: [],
+          postsPerDay: 1,
+          postTimes: ["09:00"],
+          contentStyle: "casual",
+          generateImages: true,
+          postObjective: "engagement",
+          customInstructions: "",
+          language: "pt-BR",
+          postFormat: "medium",
+          socialAccounts: socialAccounts.map((acc) => ({
+            id: acc.id,
+            platform: acc.platform,
+            platformUserId: acc.platform_user_id,
+            accessToken: acc.access_token,
+            isActive: acc.is_active && acc.is_connected,
+          })),
+        }
+      }
+
       return {
         userId,
         themes: aiConfig.themes,

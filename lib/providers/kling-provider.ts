@@ -69,7 +69,8 @@ export class KlingProvider implements VideoProvider {
         : input.prompt
 
       const modelName = process.env.KLING_VIDEO_MODEL || "kling-v2-6"
-      const duration = String(input.durationSeconds || 5)
+      const requested = Number(input.durationSeconds || 5)
+      const duration = requested <= 5 ? "5" : "10"
 
       const body = imagePayload
         ? {

@@ -67,7 +67,7 @@ export default function LoginPage() {
             <span className="text-2xl font-bold text-gray-900">AutoPostIA</span>
           </div>
           <CardTitle className="text-2xl">Bem-vindo de volta</CardTitle>
-          <CardDescription>Entre na sua conta para continuar automatizando suas redes sociais</CardDescription>
+          <CardDescription>Entre no estúdio para criar shorts e crescer sua conta</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {error && (

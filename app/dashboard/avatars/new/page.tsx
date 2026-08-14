@@ -8,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { UserMenu } from "@/components/user-menu"
-import { DashboardNav } from "@/components/dashboard-nav"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "sonner"
 
@@ -96,18 +94,9 @@ function NewAvatarPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{isImport ? "Importar Avatar" : "Criar Avatar"}</h1>
-          <UserMenu />
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        <DashboardNav />
-
-        <Card>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <h1 className="text-2xl font-semibold">{isImport ? "Importar Avatar" : "Criar Avatar"}</h1>
+      <Card>
           <CardHeader>
             <CardTitle>{isImport ? "Enviar fotos de referência" : "Descreva seu personagem"}</CardTitle>
           </CardHeader>
@@ -161,7 +150,6 @@ function NewAvatarPageContent() {
             )}
           </CardContent>
         </Card>
-      </main>
     </div>
   )
 }

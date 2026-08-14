@@ -9,12 +9,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    // Buscar configuração da IA do usuário
     let config
     try {
       config = await DatabaseService.getAIConfiguration(userId)
     } catch (error) {
-      // Se não existe configuração, criar uma padrão
+      config = null
+    }
+
+    if (!config) {
       config = {
         user_id: userId,
         themes: ["Produtividade e organização", "Marketing digital", "Empreendedorismo"],
@@ -29,7 +31,6 @@ export async function GET(request: NextRequest) {
         is_active: true,
       }
 
-      // Salvar configuração padrão
       config = await DatabaseService.updateAIConfiguration(userId, config)
     }
 

@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Upload, UserCircle2 } from "lucide-react"
-import { UserMenu } from "@/components/user-menu"
-import { DashboardNav } from "@/components/dashboard-nav"
 import { useAvatars } from "@/hooks/use-api"
 
 export default function AvatarsPage() {
@@ -14,21 +12,12 @@ export default function AvatarsPage() {
   const avatars = (data as any)?.avatars || []
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Avatares</h1>
-            <p className="text-sm text-muted-foreground">Biblioteca de modelos virtuais</p>
-          </div>
-          <UserMenu />
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        <DashboardNav />
-
-        <div className="flex gap-3">
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">Avatares</h1>
+        <p className="text-sm text-zinc-400">Seu modelo no short — sem clonar o vídeo de terceiros</p>
+      </div>
+      <div className="flex gap-3">
           <Button asChild>
             <Link href="/dashboard/avatars/new">
               <Plus className="h-4 w-4 mr-2" />
@@ -86,7 +75,6 @@ export default function AvatarsPage() {
             ))}
           </div>
         )}
-      </main>
     </div>
   )
 }

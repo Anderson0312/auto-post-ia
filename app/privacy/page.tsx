@@ -4,6 +4,9 @@ import type { Metadata } from "next"
 export const metadata: Metadata = {
   title: "Política de Privacidade | AutoPostIA",
   description: "Como o AutoPostIA coleta, usa e protege dados pessoais, incluindo login com TikTok e YouTube.",
+  other: {
+    "tiktok-developers-site-verification": "qcTfinDALEcr8ce8wvT2Dil4x9PbWsDZ",
+  },
 }
 
 const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL ?? "andersonmouranst@gmail.com"
