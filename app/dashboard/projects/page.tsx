@@ -1,7 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import { useProjects } from "@/hooks/use-api"
+import { apiClient } from "@/lib/api-client"
+import { toast } from "sonner"
 
 const statusLabels: Record<string, string> = {
   draft: "Rascunho",
@@ -14,8 +17,23 @@ const statusLabels: Record<string, string> = {
 }
 
 export default function ProjectsPage() {
-  const { data, loading } = useProjects()
+  const { data, loading, refetch } = useProjects()
   const projects = (data as any)?.projects || []
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  const remove = async (id: string, title: string) => {
+    if (!confirm(`Apagar "${title}" e todos os arquivos deste short?`)) return
+    setDeleting(id)
+    try {
+      await apiClient.deleteProject(id)
+      toast.success("Vídeo apagado")
+      refetch()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao apagar")
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -43,15 +61,25 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {projects.map((project: any) => (
-            <Link key={project.id} href={`/dashboard/projects/${project.id}`}>
-              <div className="aspect-[9/16] overflow-hidden rounded-xl bg-zinc-900">
-                {(project.thumbnail_url || project.final_video_url) && (
-                  <img src={project.thumbnail_url || project.final_video_url} alt="" className="h-full w-full object-cover" />
-                )}
-              </div>
-              <p className="mt-2 line-clamp-2 text-xs">{project.title}</p>
-              <p className="text-[10px] text-zinc-500">{statusLabels[project.status] || project.status}</p>
-            </Link>
+            <div key={project.id} className="group relative">
+              <Link href={`/dashboard/projects/${project.id}`}>
+                <div className="aspect-[9/16] overflow-hidden rounded-xl bg-zinc-900">
+                  {(project.thumbnail_url || project.final_video_url) && (
+                    <img src={project.thumbnail_url || project.final_video_url} alt="" className="h-full w-full object-cover" />
+                  )}
+                </div>
+                <p className="mt-2 line-clamp-2 text-xs">{project.title}</p>
+                <p className="text-[10px] text-zinc-500">{statusLabels[project.status] || project.status}</p>
+              </Link>
+              <button
+                type="button"
+                disabled={deleting === project.id}
+                onClick={() => remove(project.id, project.title)}
+                className="mt-1 text-[11px] text-red-400 hover:text-red-300"
+              >
+                {deleting === project.id ? "Apagando..." : "Apagar"}
+              </button>
+            </div>
           ))}
         </div>
       )}

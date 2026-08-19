@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { PipelineStepper } from "@/components/video/pipeline-stepper"
 import { SceneCard } from "@/components/video/scene-card"
 import { VideoPreview } from "@/components/video/video-preview"
@@ -13,6 +13,7 @@ import { toast } from "sonner"
 
 export default function ProjectDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params.id as string
   const { data, loading, refetch } = useProject(id)
   const project = (data as any)?.project
@@ -87,6 +88,26 @@ export default function ProjectDetailPage() {
           </button>
           <button type="button" disabled className="w-full rounded-full border border-zinc-800 py-2 text-xs text-zinc-500">
             Publicar — aguardando aprovação TikTok
+          </button>
+          <button
+            type="button"
+            className="w-full rounded-full border border-red-900 py-2 text-sm text-red-400 hover:bg-red-950/40"
+            disabled={!!actionLoading || !project}
+            onClick={async () => {
+              if (!confirm("Apagar este short e todos os arquivos (roteiro, cenas, vídeo)?")) return
+              setActionLoading("delete")
+              try {
+                await apiClient.deleteProject(id)
+                toast.success("Vídeo apagado")
+                router.push("/dashboard/projects")
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Erro ao apagar")
+              } finally {
+                setActionLoading(null)
+              }
+            }}
+          >
+            {actionLoading === "delete" ? "Apagando..." : "Apagar vídeo"}
           </button>
         </div>
       </div>

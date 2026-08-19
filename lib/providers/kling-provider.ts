@@ -115,7 +115,7 @@ export class KlingProvider implements VideoProvider {
       return {
         status: "processing",
         externalJobId: taskId,
-        outputData: data as unknown as Record<string, unknown>,
+        outputData: { endpoint, ...(data as unknown as Record<string, unknown>) },
       }
     } catch (error) {
       return {
@@ -132,11 +132,28 @@ export class KlingProvider implements VideoProvider {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/v1/videos/tasks/${externalJobId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const paths = [
+        `/v1/videos/image2video/${externalJobId}`,
+        `/v1/videos/text2video/${externalJobId}`,
+        `/v1/videos/tasks/${externalJobId}`,
+      ]
 
-      const data = (await response.json()) as KlingTaskResponse
+      let data: KlingTaskResponse | null = null
+      for (const path of paths) {
+        const response = await fetch(`${this.baseUrl}${path}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const json = (await response.json()) as KlingTaskResponse
+        if (json.data?.task_status) {
+          data = json
+          break
+        }
+      }
+
+      if (!data) {
+        return { status: "processing", externalJobId }
+      }
+
       const status = data.data?.task_status
 
       if (status === "succeed" || status === "completed") {

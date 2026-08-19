@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { DatabaseService } from "@/lib/database"
 import { getUserIdFromRequest } from "@/lib/session"
+import { llmGenerateText } from "@/lib/llm"
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,24 +10,20 @@ export async function POST(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
-    const { prompt, max_tokens = 500 } = await request.json()
+    const { prompt } = await request.json()
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt é obrigatório" }, { status: 400 })
     }
 
     // Gerar texto com IA
-    const result = await generateText({
-      model: openai("gpt-4o"),
-      prompt,
-      maxTokens: max_tokens,
-    })
+    const text = await llmGenerateText(prompt)
 
     // Atualizar contador de uso
     await DatabaseService.updateUsageTracking(userId, "ai_generations")
 
     return NextResponse.json({
-      text: result.text,
+      text,
       message: "Texto gerado com sucesso",
     })
   } catch (error) {

@@ -44,12 +44,17 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const formats = await ViralEngineService.getTrendingTopics({
-    niche,
-    platform: "tiktok",
-    objective,
-    count: 8,
-  })
+  let formats: Awaited<ReturnType<typeof ViralEngineService.getTrendingTopics>> = []
+  try {
+    formats = await ViralEngineService.getTrendingTopics({
+      niche,
+      platform: "tiktok",
+      objective,
+      count: 8,
+    })
+  } catch (error) {
+    console.error("GET /api/grow/trending formats:", error)
+  }
 
   return NextResponse.json({
     youtube,
@@ -57,6 +62,8 @@ export async function GET(request: NextRequest) {
     objective,
     note: youtube.length
       ? "YouTube popular + formatos IA. Sem API oficial de trends do TikTok."
-      : "Sem chave YouTube Data API. Mostrando formatos em alta gerados por IA.",
+      : formats.length
+        ? "Formatos em alta gerados por IA."
+        : "Não foi possível gerar formatos agora. Tente de novo em instantes.",
   })
 }

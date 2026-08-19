@@ -1,7 +1,8 @@
-import { generateText, generateObject } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 import { StorageService } from "@/lib/storage/gcs-service"
+import { llmGenerateObject, llmGenerateText } from "@/lib/llm"
+import { getImageProvider, KlingImageService } from "@/lib/providers/kling-image"
+import { GeminiImageService, PollinationsImageService } from "@/lib/providers/gemini-image"
 
 export interface PostGenerationRequest {
   themes: string[]
@@ -81,52 +82,12 @@ Retorne um JSON com:
 `
 
     try {
-      // Tentar primeiro com generateObject usando schema Zod
-      try {
-        const result = await generateObject({
-          model: openai("gpt-4o"),
-          prompt,
-          schema: PostSchema,
-        })
-
-        return {
-          content: result.object.content,
-          hashtags: result.object.hashtags,
-          imagePrompt: result.object.imagePrompt,
-          aiPrompt: prompt,
-        }
-      } catch (generateObjectError) {
-        console.warn("generateObject failed, falling back to generateText:", generateObjectError)
-        
-        // Fallback para generateText se generateObject falhar
-        const result = await generateText({
-          model: openai("gpt-4o"),
-          prompt: prompt + "\n\nResponda APENAS com um JSON válido no formato:\n{\n  \"content\": \"texto do post\",\n  \"hashtags\": [\"hashtag1\", \"hashtag2\"],\n  \"imagePrompt\": \"descrição da imagem\"\n}",
-        })
-
-        // Tentar fazer parse do JSON
-        try {
-          const jsonMatch = result.text.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0])
-            return {
-              content: parsed.content || "Post gerado automaticamente",
-              hashtags: parsed.hashtags || [],
-              imagePrompt: parsed.imagePrompt,
-              aiPrompt: prompt,
-            }
-          }
-        } catch (parseError) {
-          console.warn("Failed to parse JSON response:", parseError)
-        }
-
-        // Fallback final - resposta simples
-        return {
-          content: result.text.substring(0, 280) || "Post gerado automaticamente sobre " + themes.join(", "),
-          hashtags: themes.slice(0, 3),
-          imagePrompt: `Professional social media image about ${themes[0]}`,
-          aiPrompt: prompt,
-        }
+      const parsed = await llmGenerateObject(prompt, PostSchema)
+      return {
+        content: parsed.content,
+        hashtags: parsed.hashtags,
+        imagePrompt: parsed.imagePrompt,
+        aiPrompt: prompt,
       }
     } catch (error) {
       console.error("Error generating post:", error)
@@ -138,9 +99,53 @@ Retorne um JSON com:
     prompt: string,
     options?: { size?: "1024x1024" | "1024x1792" | "1792x1024" | "1024x1536" | "1536x1024"; forVideo?: boolean },
   ): Promise<string> {
+    const errors: string[] = []
+
+    if (getImageProvider() === "kling") {
+      try {
+        return await KlingImageService.generateImage(prompt, {
+          size: options?.size,
+          forVideo: options?.forVideo,
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn("Kling image falhou:", message)
+        errors.push(`Kling: ${message}`)
+      }
+    }
+
+    try {
+      return await PollinationsImageService.generateImage(prompt, { forVideo: options?.forVideo })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn("Pollinations image falhou:", message)
+      errors.push(`Pollinations: ${message}`)
+    }
+
+    try {
+      return await GeminiImageService.generateImage(prompt, { forVideo: options?.forVideo })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn("Gemini image falhou:", message)
+      errors.push(`Gemini: ${message}`)
+    }
+
+    if (process.env.IMAGE_PROVIDER === "openai" || process.env.IMAGE_ALLOW_OPENAI === "true") {
+      return this.generateImageWithOpenAI(prompt, options)
+    }
+
+    throw new Error(
+      `Nenhum provedor de imagem disponível. Kling e OpenAI estão sem crédito. ${errors.join(" | ")}`,
+    )
+  }
+
+  private static async generateImageWithOpenAI(
+    prompt: string,
+    options?: { size?: "1024x1024" | "1024x1792" | "1792x1024" | "1024x1536" | "1536x1024"; forVideo?: boolean },
+  ): Promise<string> {
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      throw new Error("OPENAI_API_KEY não configurada")
+      throw new Error("Nenhum provedor de imagem disponível (Kling falhou e OPENAI_API_KEY não está configurada)")
     }
 
     const trimmedPrompt = prompt.length > 3800 ? `${prompt.slice(0, 3800)}...` : prompt
@@ -207,10 +212,54 @@ Retorne um JSON com:
     referenceImageUrl: string,
     options?: { forVideo?: boolean; inputFidelity?: "high" | "low" },
   ): Promise<string> {
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      throw new Error("OPENAI_API_KEY não configurada")
+    const errors: string[] = []
+
+    if (getImageProvider() === "kling") {
+      try {
+        return await KlingImageService.generateImage(prompt, {
+          forVideo: options?.forVideo,
+          referenceImageUrl,
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        console.warn("Kling image-edit falhou:", message)
+        errors.push(`Kling: ${message}`)
+      }
     }
+
+    try {
+      return await PollinationsImageService.generateImage(prompt, { forVideo: options?.forVideo })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn("Pollinations image-edit falhou:", message)
+      errors.push(`Pollinations: ${message}`)
+    }
+
+    try {
+      return await GeminiImageService.generateImage(prompt, {
+        forVideo: options?.forVideo,
+        referenceImageUrl,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn("Gemini image-edit falhou:", message)
+      errors.push(`Gemini: ${message}`)
+    }
+
+    if (process.env.IMAGE_ALLOW_OPENAI === "true") {
+      return this.generateImageEditWithOpenAI(prompt, referenceImageUrl, options)
+    }
+
+    throw new Error(`Não foi possível gerar a variação da imagem. ${errors.join(" | ")}`)
+  }
+
+  private static async generateImageEditWithOpenAI(
+    prompt: string,
+    referenceImageUrl: string,
+    options?: { forVideo?: boolean; inputFidelity?: "high" | "low" },
+  ): Promise<string> {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) throw new Error("OPENAI_API_KEY não configurada")
 
     const buffer = await StorageService.resolveMediaBuffer(referenceImageUrl)
     const trimmedPrompt = prompt.length > 32000 ? `${prompt.slice(0, 32000)}...` : prompt
@@ -286,12 +335,8 @@ Retorne apenas o post melhorado, mantendo o mesmo tom e estilo, mas incorporando
 `
 
     try {
-      const result = await generateText({
-        model: openai("gpt-4o"),
-        prompt,
-      })
-
-      return result.text
+      const result = await llmGenerateText(prompt)
+      return result
     } catch (error) {
       console.error("Error improving post:", error)
       throw new Error("Falha ao melhorar post com IA")

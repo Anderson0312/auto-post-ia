@@ -4,6 +4,7 @@ import { getVideoProvider, isRealisticAvatar } from "@/lib/providers/provider-ro
 import { StorageService } from "@/lib/storage/gcs-service"
 import { VideoDatabaseService } from "@/lib/video-database"
 import { SHORT_ASPECT_RATIO } from "@/lib/short-form"
+import { shortUsesAvatar, type ShortEditableParams } from "@/lib/shorts/short-prompt-template"
 import type { AIProvider } from "@/lib/types/video-platform"
 
 function toAbsoluteMediaUrl(url: string) {
@@ -43,20 +44,33 @@ async function generateSceneImageWithFallback(
   )
 
   const avatar = project.virtual_avatars
-  const referenceImageUrl = getAvatarFallbackImage(project)
+  const projectConfig = (project.config || {}) as Record<string, unknown>
+  const shortParams = (projectConfig.shortParams || projectConfig.PARAMETROS_EDITAVEIS) as
+    | Partial<ShortEditableParams>
+    | undefined
+  const useAvatar = Boolean(avatar) && (!shortParams || shortUsesAvatar(shortParams))
+  const referenceImageUrl = useAvatar ? getAvatarFallbackImage(project) : null
 
   try {
     const tempUrl = await OpenAIProvider.generateCharacterImage(
       scene.visual_prompt || project.prompt || "social media scene",
-      avatar?.master_prompt,
+      useAvatar ? avatar?.master_prompt : undefined,
       referenceImageUrl,
-      avatar?.name,
+      useAvatar ? avatar?.name : undefined,
+      {
+        useAvatar,
+        visualStyle: shortParams?.estilo_visual,
+        formatoVisual: shortParams?.formato_visual,
+        publicoAlvo: shortParams?.publico_alvo,
+        categoria: shortParams?.categoria,
+      },
     )
     return {
       ...(await StorageService.uploadFromUrl(tempUrl, storagePath)),
       source: "openai" as const,
     }
   } catch (dalleError) {
+    if (!useAvatar) throw dalleError
     const fallbackUrl = getAvatarFallbackImage(project)
     if (!fallbackUrl) throw dalleError
 
@@ -75,8 +89,8 @@ async function generateSceneImageWithFallback(
 async function pollVideoJob(
   provider: AIProvider,
   externalJobId: string,
-  maxAttempts = 30,
-  delayMs = 5000,
+  maxAttempts = 60,
+  delayMs = 8000,
 ) {
   const videoProvider = getVideoProvider(provider)
   if (!videoProvider) throw new Error(`Provider ${provider} não suporta vídeo`)
@@ -97,7 +111,7 @@ export class VideoPipelineService {
     const scenes = await VideoDatabaseService.getScenesByProject(projectId)
 
     for (const scene of scenes) {
-      if (scene.image_url && scene.status !== "failed") {
+      if (scene.image_url) {
         continue
       }
 
@@ -152,10 +166,11 @@ export class VideoPipelineService {
 
   static async generateSceneVideos(projectId: string, userId: string) {
     const project = await VideoDatabaseService.getProjectById(userId, projectId)
-    const scenes = await VideoDatabaseService.getScenesByProject(projectId)
-    if (!scenes.length) {
+    const allScenes = await VideoDatabaseService.getScenesByProject(projectId)
+    if (!allScenes.length) {
       throw new Error("Gere as cenas antes do vídeo (botão Gerar cenas).")
     }
+    const scenes = allScenes.slice(0, 3)
 
     await VideoDatabaseService.updateProject(userId, projectId, { status: "rendering" })
 
@@ -179,7 +194,7 @@ export class VideoPipelineService {
         continue
       }
 
-      await VideoDatabaseService.updateScene(scene.id, { status: "generating_video" })
+      console.log(`Vídeo cena ${scene.scene_order + 1}/${scenes.length} via ${provider}...`)
 
       const job = await VideoDatabaseService.createGenerationJob({
         user_id: userId,

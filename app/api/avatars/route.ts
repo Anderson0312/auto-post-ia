@@ -24,8 +24,16 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
 
     const body = await request.json()
-    if (!body.name || !body.description) {
-      return NextResponse.json({ error: "Nome e descrição são obrigatórios" }, { status: 400 })
+    if (!body.name) {
+      return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 })
+    }
+
+    const hasParams = body.avatarParams && typeof body.avatarParams === "object"
+    if (!hasParams && !body.description?.trim()) {
+      return NextResponse.json(
+        { error: "Informe os parâmetros do avatar ou uma descrição" },
+        { status: 400 },
+      )
     }
 
     const avatar = await AvatarService.createFromDescription(userId, body)

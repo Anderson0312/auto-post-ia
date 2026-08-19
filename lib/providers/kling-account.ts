@@ -33,6 +33,14 @@ async function getToken() {
   return createKlingJwt(accessKey, secretKey)
 }
 
+export async function getKlingAuthToken() {
+  return getToken()
+}
+
+export function getKlingBaseUrl() {
+  return getBaseUrl()
+}
+
 export async function getKlingAccountStatus(): Promise<KlingAccountStatus> {
   const baseUrl = getBaseUrl()
   const token = await getToken()

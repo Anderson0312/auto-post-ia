@@ -134,6 +134,55 @@ export class VideoDatabaseService {
     return data
   }
 
+  static async getMediaAssetsByProject(projectId: string) {
+    const { data, error } = await supabaseAdmin.from("media_assets").select("*").eq("project_id", projectId)
+    if (error) throw error
+    return data || []
+  }
+
+  static async deleteProject(userId: string, projectId: string) {
+    const project = await this.getProjectById(userId, projectId)
+    const assets = await this.getMediaAssetsByProject(projectId)
+    const paths = new Set<string>()
+
+    for (const asset of assets) {
+      if (asset.storage_path) paths.add(asset.storage_path)
+    }
+
+    const urlFields = [
+      project.final_video_url,
+      project.thumbnail_url,
+      ...(project.project_scenes || []).flatMap((s: { image_url?: string; video_url?: string }) => [
+        s.image_url,
+        s.video_url,
+      ]),
+    ]
+    const narration = (project.config as { narration?: { url?: string }; subtitles?: { srtUrl?: string; vttUrl?: string } } | null) || null
+    urlFields.push(narration?.narration?.url, narration?.subtitles?.srtUrl, narration?.subtitles?.vttUrl)
+
+    const { StorageService } = await import("@/lib/storage/gcs-service")
+    for (const url of urlFields) {
+      const fromUrl = StorageService.pathFromPublicUrl(url)
+      if (fromUrl) paths.add(fromUrl)
+    }
+
+    await Promise.all([...paths].map((p) => StorageService.deleteFile(p)))
+    await StorageService.deletePrefix(`projects/${projectId}`)
+
+    await supabaseAdmin.from("media_assets").delete().eq("project_id", projectId)
+    await supabaseAdmin.from("generation_jobs").delete().eq("project_id", projectId)
+    await supabaseAdmin.from("project_scenes").delete().eq("project_id", projectId)
+    await supabaseAdmin.from("project_scripts").delete().eq("project_id", projectId)
+
+    const { error } = await supabaseAdmin
+      .from("content_projects")
+      .delete()
+      .eq("id", projectId)
+      .eq("user_id", userId)
+    if (error) throw error
+    return { deleted: true, files: paths.size }
+  }
+
   static async createProjectScript(data: {
     project_id: string
     hook?: string

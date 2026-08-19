@@ -10,11 +10,12 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const ideas = await ViralEngineService.generateIdeas({
-      niche: body.niche || body.prompt || "geral",
+      niche: body.niche || body.prompt || "",
       platform: body.platform || "instagram",
       objective: (body.objective || "engagement") as ContentObjective,
       count: body.count,
       avatarName: body.avatarName,
+      shortParams: body.shortParams,
     })
 
     return NextResponse.json({ ideas })

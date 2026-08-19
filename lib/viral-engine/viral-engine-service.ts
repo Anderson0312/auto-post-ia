@@ -1,8 +1,14 @@
-import { generateObject, generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { z } from "zod"
 import type { ContentObjective } from "@/lib/types/video-platform"
 import type { GuidedBrief, HookOptimization, TrendTopic, ViralIdea } from "@/lib/viral-engine/types"
+import { llmGenerateObject, llmGenerateText } from "@/lib/llm"
+import {
+  buildShortPromptConfig,
+  buildShortScriptContext,
+  isAdultSensualCategory,
+  parseAngleCount,
+  type ShortEditableParams,
+} from "@/lib/shorts/short-prompt-template"
 
 const IdeasSchema = z.object({
   ideas: z.array(
@@ -12,7 +18,7 @@ const IdeasSchema = z.object({
       angle: z.string(),
       format: z.string(),
       cta: z.string(),
-      viralScore: z.number().min(1).max(10),
+      viralScore: z.coerce.number().min(1).max(10),
       whyItWorks: z.string(),
     }),
   ),
@@ -34,9 +40,18 @@ const TrendsSchema = z.object({
       title: z.string(),
       format: z.string(),
       hook: z.string(),
-      hashtags: z.array(z.string()),
+      hashtags: z.union([z.array(z.string()), z.string()]).transform((value) =>
+        Array.isArray(value) ? value : value.split(/[\s,]+/).filter(Boolean),
+      ),
       whyTrending: z.string(),
-      difficulty: z.enum(["easy", "medium", "hard"]),
+      difficulty: z
+        .string()
+        .transform((value) => {
+          const normalized = value.toLowerCase()
+          if (normalized.includes("easy") || normalized.includes("facil") || normalized.includes("fácil")) return "easy"
+          if (normalized.includes("hard") || normalized.includes("dificil") || normalized.includes("difícil")) return "hard"
+          return "medium"
+        }),
     }),
   ),
 })
@@ -76,34 +91,59 @@ export class ViralEngineService {
     objective: ContentObjective
     count?: number
     avatarName?: string
+    shortParams?: Partial<ShortEditableParams>
   }): Promise<ViralIdea[]> {
-    const count = Math.min(params.count || 10, 20)
+    const count = Math.min(params.count || parseAngleCount(params.shortParams?.quantidade_angulos), 20)
+    const shortConfig = params.shortParams ? buildShortPromptConfig(params.shortParams) : null
+    const p = shortConfig?.PARAMETROS_EDITAVEIS
+    const userHint = params.niche?.trim() && params.niche.trim().toLowerCase() !== "geral"
+      ? params.niche.trim()
+      : ""
     const prompt = `
-Você é um estrategista de conteúdo viral para vídeos curtos.
+Você é um estrategista de conteúdo viral para vídeos curtos (TikTok / Shorts / Reels).
 
-Nicho: ${params.niche}
+OBJETIVO PRINCIPAL DA CONTA/VÍDEO: ${params.objective} — ${objectiveGuidelines[params.objective] || "engajamento"}
+Este objetivo é a prioridade número 1. Toda ideia deve servir a esse objetivo.
+
 Plataforma: ${params.platform} — ${platformGuidelines[params.platform] || "vídeo vertical curto"}
-Objetivo: ${params.objective} — ${objectiveGuidelines[params.objective] || "engajamento"}
 ${params.avatarName ? `Avatar/personagem: ${params.avatarName}` : ""}
+${p ? `
+PARÂMETROS CADASTRADOS PELO USUÁRIO (obrigatório respeitar TODOS):
+- Público-alvo: ${p.publico_alvo}
+- Categoria: ${p.categoria}
+- Formato visual: ${p.formato_visual}
+- Estilo: ${p.estilo_visual}
+- Tom: ${p.tom}
+- Linguagem: ${p.linguagem}
+- Ritmo: ${p.ritmo}
+- Narração: ${p.narracao}
+- Duração: ${p.duracao}
+- CTA: ${p.cta}
+- Regra visual: ${shortConfig?.VISUAL.personagem}
+- Cenas: ${shortConfig?.VISUAL.cenas}
+${isAdultSensualCategory(p.categoria) ? `
+Categoria +18 SENSUAL: ideias de shorts para adultos com tensão, charme, desejo sutil e visual atraente.
+Toda pessoa mencionada deve ser adulta 18+.
+SEM genitália, SEM pornografia, SEM menores.
+Hooks visuais: olhar, corpo, lingerie, atmosfera íntima.
+` : ""}
+` : ""}
+${userHint
+  ? `Dica extra do usuário (usar como tema, sem ignorar os parâmetros): ${userHint}`
+  : `O usuário NÃO escreveu uma ideia pronta. Invente ideias concretas, específicas e prontas para gravar usando SOMENTE o objetivo principal e os parâmetros cadastrados. Não peça mais informações.`}
 
-Gere ${count} ideias de vídeo com alto potencial viral.
-Cada ideia deve ter hook forte (primeiros 3 segundos), ângulo único e CTA claro.
+Gere EXATAMENTE ${count} ideias de vídeo com alto potencial viral.
+Cada ideia deve ter título, hook forte (primeiros 3 segundos), ângulo único, formato e CTA claro.
+As ideias DEVEM respeitar o público-alvo, a categoria e o formato visual.
 Idioma: pt-BR.
 `
 
     try {
-      const result = await generateObject({
-        model: openai("gpt-4o"),
-        prompt,
-        schema: IdeasSchema,
-      })
-      return result.object.ideas
+      const result = await llmGenerateObject(prompt, IdeasSchema)
+      return result.ideas
     } catch {
-      const fallback = await generateText({
-        model: openai("gpt-4o"),
-        prompt: prompt + "\nResponda em JSON válido com array 'ideas'.",
-      })
-      const match = fallback.text.match(/\{[\s\S]*\}/)
+      const fallback = await llmGenerateText(prompt + "\nResponda em JSON válido com array 'ideas'.")
+      const match = fallback.match(/\{[\s\S]*\}/)
       if (match) {
         const parsed = JSON.parse(match[0])
         return parsed.ideas || []
@@ -131,13 +171,9 @@ Idioma: pt-BR.
 `
 
     try {
-      const result = await generateObject({
-        model: openai("gpt-4o"),
-        prompt,
-        schema: GuidedBriefSchema,
-      })
+      const result = await llmGenerateObject(prompt, GuidedBriefSchema)
       return {
-        ...result.object,
+        ...result,
         objective: params.objective,
         platform: params.platform,
       }
@@ -167,14 +203,11 @@ Idioma do conteúdo: pt-BR.
 `
 
     try {
-      const result = await generateObject({
-        model: openai("gpt-4o"),
-        prompt,
-        schema: TrendsSchema,
-      })
-      return result.object.trends
-    } catch {
-      throw new Error("Falha ao buscar tendências")
+      const result = await llmGenerateObject(prompt, TrendsSchema)
+      return result.trends as TrendTopic[]
+    } catch (error) {
+      console.error("getTrendingTopics:", error)
+      throw new Error(error instanceof Error ? error.message : "Falha ao buscar tendências")
     }
   }
 
@@ -185,8 +218,15 @@ Idioma do conteúdo: pt-BR.
     const trends = config.trends as TrendTopic[] | undefined
     const viralIdea = config.viralIdea as ViralIdea | undefined
     const trendsContext = config.trendsContext as string | undefined
+    const shortParams = (config.shortParams || config.PARAMETROS_EDITAVEIS) as
+      | Partial<ShortEditableParams>
+      | undefined
 
     if (trendsContext) parts.push(`Contexto de tendências: ${trendsContext}`)
+    if (shortParams) {
+      const shortConfig = buildShortPromptConfig(shortParams)
+      parts.push(buildShortScriptContext(shortConfig))
+    }
     if (viralIdea) {
       parts.push(
         `Ideia viral selecionada — Hook: ${viralIdea.hook}. Ângulo: ${viralIdea.angle}. CTA: ${viralIdea.cta}.`,
@@ -220,17 +260,13 @@ Idioma: pt-BR.
 `
 
     try {
-      const result = await generateObject({
-        model: openai("gpt-4o"),
-        prompt,
-        schema: HookSchema,
-      })
+      const result = await llmGenerateObject(prompt, HookSchema)
       return {
         originalHook: params.hook,
-        improvedHook: result.object.improvedHook,
-        alternatives: result.object.alternatives,
-        captionSuggestions: result.object.captionSuggestions,
-        tips: result.object.tips,
+        improvedHook: result.improvedHook,
+        alternatives: result.alternatives,
+        captionSuggestions: result.captionSuggestions,
+        tips: result.tips,
       }
     } catch {
       throw new Error("Falha ao otimizar hook")

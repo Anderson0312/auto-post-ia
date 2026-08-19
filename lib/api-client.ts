@@ -336,6 +336,12 @@ class APIClient {
     })
   }
 
+  async deleteProject(id: string) {
+    return this.request<{ message: string; deleted: boolean }>(`/projects/${id}`, {
+      method: "DELETE",
+    })
+  }
+
   async getProjectJobs(id: string) {
     return this.request<{ jobs: any[] }>(`/projects/${id}/jobs`)
   }

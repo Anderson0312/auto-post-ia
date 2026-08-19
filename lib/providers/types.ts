@@ -6,12 +6,15 @@ export interface VideoProvider {
   getJobStatus(externalJobId: string): Promise<GenerationJobResult>
 }
 
+import type { AvatarEditableParams } from "@/lib/avatars/selfie-prompt-template"
+
 export interface AvatarIdentityInput {
   name: string
   description: string
   visualStyle?: string
   niche?: string
   personality?: string
+  avatarParams?: Partial<AvatarEditableParams>
 }
 
 export interface GeneratedAvatarIdentity {

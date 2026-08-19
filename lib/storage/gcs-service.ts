@@ -127,4 +127,35 @@ export class StorageService {
 
     return `/api/media/${encodeURIComponent(storagePath)}`
   }
+
+  static pathFromPublicUrl(url?: string | null): string | null {
+    if (!url) return null
+    const marker = "/api/media/"
+    if (url.includes(marker)) {
+      return decodeURIComponent(url.split(marker)[1] || "").split("?")[0]
+    }
+    return null
+  }
+
+  static async deleteFile(storagePath: string) {
+    if (!storagePath) return
+    try {
+      if (isGcsConfigured()) {
+        await getStorageClient().bucket(process.env.GCS_BUCKET!).file(storagePath).delete({ ignoreNotFound: true })
+        return
+      }
+      await fs.unlink(path.join(LOCAL_STORAGE_DIR, storagePath))
+    } catch {
+      /* já pode ter sido apagado */
+    }
+  }
+
+  static async deletePrefix(prefix: string) {
+    if (!prefix) return
+    if (isGcsConfigured()) {
+      await getStorageClient().bucket(process.env.GCS_BUCKET!).deleteFiles({ prefix, force: true })
+      return
+    }
+    await fs.rm(path.join(LOCAL_STORAGE_DIR, prefix), { recursive: true, force: true })
+  }
 }

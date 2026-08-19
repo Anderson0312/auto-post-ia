@@ -1,6 +1,7 @@
 import { OpenAIProvider } from "@/lib/providers/openai-provider"
 import { isRealisticAvatar, routeStoryboardScene } from "@/lib/providers/provider-router"
 import { VideoDatabaseService } from "@/lib/video-database"
+import { buildShortPromptConfig, shortUsesAvatar, type ShortEditableParams } from "@/lib/shorts/short-prompt-template"
 import type { GeneratedScript } from "@/lib/providers/types"
 
 export class StoryboardGenerator {
@@ -20,10 +21,17 @@ export class StoryboardGenerator {
       structure: scriptRow.structure as GeneratedScript["structure"],
     }
 
-    const realisticHuman =
-      Boolean((project.config as Record<string, unknown>)?.realisticHuman) ||
-      isRealisticAvatar(project.virtual_avatars) ||
-      Boolean(project.avatar_id)
+    const projectConfig = (project.config || {}) as Record<string, unknown>
+    const shortParams = (projectConfig.shortParams || projectConfig.PARAMETROS_EDITAVEIS) as
+      | Partial<ShortEditableParams>
+      | undefined
+    const shortConfig = shortParams ? buildShortPromptConfig(shortParams) : null
+    const hasAvatar = Boolean(project.avatar_id && project.virtual_avatars)
+    const useAvatar = hasAvatar && (!shortConfig || shortUsesAvatar(shortConfig.PARAMETROS_EDITAVEIS))
+    const realisticHuman = useAvatar && (
+      Boolean(projectConfig.realisticHuman) ||
+      isRealisticAvatar(project.virtual_avatars)
+    )
 
     await VideoDatabaseService.updateProject(userId, projectId, { status: "storyboard" })
 
@@ -38,8 +46,10 @@ export class StoryboardGenerator {
     try {
       const scenes = await OpenAIProvider.generateStoryboard({
         script,
-        avatarMasterPrompt: project.virtual_avatars?.master_prompt,
+        avatarMasterPrompt: useAvatar ? project.virtual_avatars?.master_prompt : undefined,
         realisticHuman,
+        hasAvatar: useAvatar,
+        shortParams,
       })
 
       await VideoDatabaseService.deleteScenesByProject(projectId)
